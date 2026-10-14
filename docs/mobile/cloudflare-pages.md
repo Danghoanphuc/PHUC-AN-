@@ -1,6 +1,7 @@
 # Cloudflare Pages
 
 Production: https://phuc-an.pages.dev · Project: `phuc-an` · Branch: `main`.
+Deployment đã kiểm tra ngày 14/10/2026: https://13122dc3.phuc-an.pages.dev · app/header/assets commit `87641ef`.
 Triển khai dạng Direct Upload bằng Wrangler, chưa liên kết tự deploy qua GitHub. Sau mỗi bản sửa đã kiểm thử, chạy lại build/deploy bên dưới; địa chỉ production không đổi.
 
 Ứng dụng web Expo xuất thành thư mục `dist`. Supabase tiếp tục xử lý đăng nhập, phân quyền và nghiệp vụ; không cần Worker hoặc database Cloudflare.
@@ -18,3 +19,5 @@ Chỉ upload dist, không upload thư mục dự án, .local, .env, test-output 
 Bản web dùng sessionStorage theo tab cho phiên đăng nhập và giỏ nháp; đóng tab có thể mất giỏ chưa chốt. Dữ liệu đã ghi trên Supabase không bị ảnh hưởng. Chốt bán cần mạng.
 
 Kiểm tra sau deploy: HTTPS, trang đăng nhập, tải JS/font, tải lại đường dẫn, Auth/RPC đến Supabase. Không dùng giao dịch giả để kiểm thử trên DB thật. Khi cần rollback, chọn deployment thành công trước đó trong Cloudflare Pages. Hosting có thể đổi về sau mà không chuyển dữ liệu Supabase.
+
+Đã kiểm tra production trả HTTP 200, HTML no-cache, JS hash immutable, font loaded, không lỗi JavaScript/không tràn ngang ở 390×844. Từ trình duyệt trên origin production: Supabase Auth settings 200, truy cập customers chưa đăng nhập 401. Chạy 11 Playwright UI scenarios trên bản production với API mock cô lập bằng biến `PLAYWRIGHT_BASE_URL=https://phuc-an.pages.dev`; tất cả đạt, không ghi dữ liệu giả vào Supabase thật. Chưa đăng nhập bằng mật khẩu người dùng thật trong kiểm thử tự động.
