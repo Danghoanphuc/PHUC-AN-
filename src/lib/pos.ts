@@ -5,7 +5,7 @@ export const searchText = (s: string) =>
   s
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
+    .replace(/[đĐ]/g, 'd')
     .toLowerCase();
 export function posPrice(data: Data, customer: Row<'customers'>, productId: string, day = today()) {
   const tier = customer.customer_type === 'Khách lẻ' ? 'retail' : 'wholesale';

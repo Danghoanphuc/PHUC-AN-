@@ -35,6 +35,8 @@ export function POS() {
     [pending, setPending] = useState<Pending | null>(null);
   const [orderId, setOrderId] = useState('');
   const [draftReady, setDraftReady] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  const cartY = useRef(0);
   const key = useRef(Crypto.randomUUID()),
     createKey = useRef(Crypto.randomUUID()),
     posting = useRef(false);
@@ -139,7 +141,7 @@ export function POS() {
       remaining: Infinity,
     };
   }
-  const cart = products.filter((p) => (pieces[p.id] || 0) > 0);
+  const cart = products.filter((p) => (pieces[p.id] || 0) > 0 || p.id in typed);
   const total = cart.reduce((n, p) => {
     const q = quote(p.id);
     return n + (q ? posLineTotal(pieces[p.id]!, q.amount, q.pricePieces, q.discount) : 0);
@@ -148,7 +150,7 @@ export function POS() {
     const q = quote(id),
       v = Number(t.replace(',', '.'));
     return (
-      !q || !Number.isFinite(v) || v < 0 || Math.abs(v * q.pack - Math.round(v * q.pack)) > 1e-7
+      !q || !/^\d+(?:[.,]\d+)?$/.test(t) || !Number.isSafeInteger(Math.round(v * q.pack)) || v <= 0 || Math.abs(v * q.pack - Math.round(v * q.pack)) > 1e-7
     );
   });
   const draftUnavailable =
@@ -331,10 +333,11 @@ export function POS() {
     >
       <View style={styles.head}>
         <View style={s.between}>
-          <Text style={[s.label, { flex: 1 }]}>
-            PHÚC AN ·{' '}
-            {a.data.routes.find((r) => r.id === customer?.route_id)?.name || 'BÁN HÀNG THEO TUYẾN'}
-          </Text>
+          <Text style={[s.h3, { flex: 1 }]}>POS · Bán nhanh</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Lịch sử / Chốt tiền"
+            disabled={locked} onPress={() => a.go('my-sales')} style={styles.qtyButton}>
+            <Icon name="time-outline" />
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Trang chính"
@@ -345,15 +348,6 @@ export function POS() {
             <Icon name="home-outline" />
           </Pressable>
         </View>
-        <Text style={s.h2}>POS · Bán nhanh</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Lịch sử / Chốt tiền"
-          disabled={locked}
-          onPress={() => a.go('my-sales')}
-        >
-          <Text style={s.muted}>Lịch sử / Chốt tiền →</Text>
-        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Chọn hoặc tạo khách POS"
@@ -376,7 +370,21 @@ export function POS() {
           <Icon name="chevron-down" />
         </Pressable>
       </View>
+      {customer && (
+        <View style={styles.shortcuts}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Về menu món"
+            onPress={() => scroll.current?.scrollTo({ y: 0, animated: true })} style={styles.group}>
+            <Text style={s.h3}>Menu món</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Xem giỏ hàng POS"
+            onPress={() => scroll.current?.scrollTo({ y: cartY.current, animated: true })} style={styles.group}>
+            <Text style={s.h3}>Giỏ hàng · {cart.length}</Text>
+          </Pressable>
+        </View>
+      )}
       <ScrollView
+        ref={scroll}
+        testID="pos-scroll"
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 14, gap: 12, paddingBottom: 20 }}
@@ -464,11 +472,7 @@ export function POS() {
               placeholder="Tìm món, mã hoặc tên thường gọi…"
               style={s.input}
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 6 }}
-            >
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {[
                 { id: 'favorite', name: 'Món hay lấy' },
                 ...categories.map((c) => ({
@@ -494,7 +498,7 @@ export function POS() {
                   </Text>
                 </Pressable>
               ))}
-            </ScrollView>
+            </View>
             <Text style={s.muted}>
               {query
                 ? `${menu.length} kết quả`
@@ -503,12 +507,7 @@ export function POS() {
                   : `${menu.length} món`}{' '}
               · Chạm món thêm 1 bì
             </Text>
-            <ScrollView
-              nestedScrollEnabled
-              keyboardShouldPersistTaps="handled"
-              style={{ maxHeight: 244 }}
-              contentContainerStyle={styles.grid}
-            >
+            <View testID="pos-menu" style={styles.grid}>
               {menu.map((p) => {
                 const q = quote(p.id),
                   count = q ? (pieces[p.id] || 0) / q.pack : 0;
@@ -525,16 +524,13 @@ export function POS() {
                       !q && { opacity: 0.55 },
                     ]}
                   >
-                    <Text numberOfLines={2} style={[s.text, { fontWeight: '600', minHeight: 38 }]}>
+                    <Text numberOfLines={2} style={[s.h3, { minHeight: 44, paddingRight: count > 0 ? 22 : 0 }]}>
                       {p.name}
                     </Text>
                     <Text style={[s.text, { fontWeight: '700' }]}>
                       {q
                         ? money(posLineTotal(q.pack, q.amount, q.pricePieces, q.discount))
                         : 'Chưa có giá'}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: C.muted }}>
-                      {q ? `Bì ${quantity(q.pack)} cái` : 'Chưa xác minh quy cách'}
                     </Text>
                     {count > 0 && (
                       <View style={styles.badge}>
@@ -547,8 +543,8 @@ export function POS() {
               {!menu.length && (
                 <Text style={s.muted}>Không có món phù hợp. Thử tên khác hoặc Tất cả.</Text>
               )}
-            </ScrollView>
-            <View style={styles.cart}>
+            </View>
+            <View style={styles.cart} onLayout={(e) => { cartY.current = e.nativeEvent.layout.y; }}>
               <Text style={s.h3}>Giỏ hàng · {cart.length} món</Text>
               {cart.map((p) => {
                 const q = quote(p.id);
@@ -593,6 +589,7 @@ export function POS() {
                           setTyped((v) => ({ ...v, [p.id]: t }));
                           const n = Number(t.replace(',', '.')) * (q?.pack || 10);
                           if (
+                            /^\d+(?:[.,]\d+)?$/.test(t) &&
                             Number.isSafeInteger(Math.round(n)) &&
                             n >= 0 &&
                             Math.abs(n - Math.round(n)) < 1e-7
@@ -636,6 +633,7 @@ export function POS() {
                 );
               })}
               {!cart.length && <Text style={s.muted}>Chạm món phía trên để thêm hàng.</Text>}
+              {invalid && <Text style={{ color: C.red }}>Nhập số bì lớn hơn 0, đủ số cái. Dùng nút thùng rác để bỏ món.</Text>}
               <TextInput
                 accessibilityLabel="Ghi chú POS"
                 value={note}
@@ -653,7 +651,7 @@ export function POS() {
         <View style={{ flex: 1 }}>
           <Text style={s.muted}>Tổng tiền</Text>
           <Text style={[s.h2, { fontSize: 26 }]}>
-            {money(
+            {invalid && !pending ? '—' : money(
               pending?.name === 'post_pos_sale' ? Number(pending.payload.expected_total) : total,
             )}
           </Text>
@@ -758,12 +756,14 @@ export function POS() {
 }
 const styles = StyleSheet.create({
   head: {
-    padding: 16,
-    gap: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    gap: 4,
     borderBottomWidth: 1,
     borderBottomColor: C.line,
     backgroundColor: C.paper,
   },
+  shortcuts: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 8 },
   customer: {
     backgroundColor: C.soft,
     padding: 12,
@@ -783,10 +783,10 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, padding: 1 },
   tile: {
-    width: '31.5%',
-    minHeight: 108,
-    padding: 9,
-    gap: 3,
+    width: '48.5%',
+    minHeight: 96,
+    padding: 12,
+    gap: 8,
     backgroundColor: C.paper,
     borderRadius: 13,
     borderWidth: 1,

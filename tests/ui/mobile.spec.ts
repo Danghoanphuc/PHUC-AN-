@@ -649,3 +649,40 @@ test('uncertain network result keeps request key and supports safe retry from ac
   expect(keys[0]).toBe(keys[1]);
   expect(calls.filter((c) => c.name === 'save_customer_order')).toHaveLength(1);
 });
+
+test('POS catalog has one scroll surface, cart shortcuts and safe quantity editing', async ({ page }) => {
+  const { tables, calls } = await mock(page, 'staff');
+  for (let n = 0; n < 20; n++) {
+    tables.products.push({ ...tables.products[0], id: id(500 + n), sku: `TEST_${n}`, name: `Bánh thử ${n}`, category: 'Bánh ngọt' });
+    tables.product_units.push({ ...tables.product_units[0], product_id: id(500 + n) });
+    tables.selling_prices.push({ ...tables.selling_prices[0], id: id(600 + n), product_id: id(500 + n) });
+  }
+  await login(page, true);
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn hoặc tạo khách POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn khách Khách kiểm thử', exact: true }).click();
+  await page.getByRole('button', { name: 'Tất cả', exact: true }).click();
+  const menu = page.getByTestId('pos-menu');
+  expect(await menu.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+  await page.screenshot({ path: 'test-output/screenshots/pos-menu-single-scroll.png' });
+  await page.getByRole('button', { name: 'Thêm 1 bì Bánh donut', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem giỏ hàng POS', exact: true }).click();
+  const qty = page.getByLabel('Số bì Bánh donut', { exact: true });
+  await expect(qty).toBeInViewport();
+  await qty.fill('');
+  await expect(qty).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chốt bán', exact: true })).toBeDisabled();
+  await qty.pressSequentially('2');
+  await expect(qty).toHaveValue('2');
+  await qty.fill('0');
+  await expect(qty).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Chốt bán', exact: true })).toBeDisabled();
+  await qty.fill('2');
+  await page.getByRole('button', { name: 'Về menu món', exact: true }).click();
+  await expect(page.getByLabel('Tìm món POS', { exact: true })).toBeInViewport();
+  await page.getByLabel('Tìm món POS', { exact: true }).fill('donut');
+  await expect(menu.getByRole('button')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Chốt bán', exact: true }).click();
+  await expect(page.getByText('Đã ghi bán và thu đủ tiền mặt. Chọn khách tiếp theo.', { exact: true })).toBeVisible();
+  expect(calls.find(c => c.name === 'post_pos_sale')!.body.payload).toMatchObject({ expected_total: 80000, lines: [{ product_id: id(4), order_qty: 2 }] });
+});
