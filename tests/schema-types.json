@@ -1,0 +1,1722 @@
+[
+  {
+    "type": "uuid",
+    "table": "sync_runs",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "sync_runs",
+    "column": "source_system"
+  },
+  {
+    "type": "text",
+    "table": "sync_runs",
+    "column": "source_ref"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "sync_runs",
+    "column": "started_at"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "sync_runs",
+    "column": "completed_at"
+  },
+  {
+    "type": "text",
+    "table": "sync_runs",
+    "column": "status"
+  },
+  {
+    "type": "jsonb",
+    "table": "sync_runs",
+    "column": "stats"
+  },
+  {
+    "type": "text",
+    "table": "sync_runs",
+    "column": "note"
+  },
+  {
+    "type": "text",
+    "table": "product_aliases",
+    "column": "alias_sku"
+  },
+  {
+    "type": "uuid",
+    "table": "product_aliases",
+    "column": "product_id"
+  },
+  {
+    "type": "text",
+    "table": "product_aliases",
+    "column": "source_system"
+  },
+  {
+    "type": "text",
+    "table": "product_aliases",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "product_aliases",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "inventory_snapshots",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "inventory_snapshots",
+    "column": "material_id"
+  },
+  {
+    "type": "date",
+    "table": "inventory_snapshots",
+    "column": "snapshot_date"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_snapshots",
+    "column": "opening_qty"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_snapshots",
+    "column": "in_qty"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_snapshots",
+    "column": "out_qty"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_snapshots",
+    "column": "closing_qty"
+  },
+  {
+    "type": "text",
+    "table": "inventory_snapshots",
+    "column": "source_system"
+  },
+  {
+    "type": "text",
+    "table": "inventory_snapshots",
+    "column": "source_ref"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "inventory_snapshots",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "inventory_transactions",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "inventory_transactions",
+    "column": "txn_date"
+  },
+  {
+    "type": "text",
+    "table": "inventory_transactions",
+    "column": "txn_no"
+  },
+  {
+    "type": "uuid",
+    "table": "inventory_transactions",
+    "column": "material_id"
+  },
+  {
+    "type": "text",
+    "table": "inventory_transactions",
+    "column": "txn_type"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_transactions",
+    "column": "qty"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "inventory_transactions",
+    "column": "unit_cost"
+  },
+  {
+    "type": "text",
+    "table": "inventory_transactions",
+    "column": "counterparty"
+  },
+  {
+    "type": "text",
+    "table": "inventory_transactions",
+    "column": "source_system"
+  },
+  {
+    "type": "text",
+    "table": "inventory_transactions",
+    "column": "source_ref"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "inventory_transactions",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "v_cash_balances",
+    "column": "account_id"
+  },
+  {
+    "type": "text",
+    "table": "v_cash_balances",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "v_cash_balances",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "v_cash_balances",
+    "column": "account_type"
+  },
+  {
+    "type": "numeric(18,0)",
+    "table": "v_cash_balances",
+    "column": "balance"
+  },
+  {
+    "type": "uuid",
+    "table": "app_members",
+    "column": "user_id"
+  },
+  {
+    "type": "text",
+    "table": "app_members",
+    "column": "role"
+  },
+  {
+    "type": "boolean",
+    "table": "app_members",
+    "column": "active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "app_members",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "v_sale_item_margin",
+    "column": "sale_item_id"
+  },
+  {
+    "type": "uuid",
+    "table": "v_sale_item_margin",
+    "column": "sale_id"
+  },
+  {
+    "type": "date",
+    "table": "v_sale_item_margin",
+    "column": "sale_date"
+  },
+  {
+    "type": "uuid",
+    "table": "v_sale_item_margin",
+    "column": "route_id"
+  },
+  {
+    "type": "uuid",
+    "table": "v_sale_item_margin",
+    "column": "customer_id"
+  },
+  {
+    "type": "uuid",
+    "table": "v_sale_item_margin",
+    "column": "product_id"
+  },
+  {
+    "type": "text",
+    "table": "v_sale_item_margin",
+    "column": "sku"
+  },
+  {
+    "type": "text",
+    "table": "v_sale_item_margin",
+    "column": "product_name"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "v_sale_item_margin",
+    "column": "qty"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "v_sale_item_margin",
+    "column": "unit_price"
+  },
+  {
+    "type": "numeric(7,4)",
+    "table": "v_sale_item_margin",
+    "column": "discount_pct"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "v_sale_item_margin",
+    "column": "line_amount"
+  },
+  {
+    "type": "numeric",
+    "table": "v_sale_item_margin",
+    "column": "estimated_unit_material_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_sale_item_margin",
+    "column": "estimated_material_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_sale_item_margin",
+    "column": "estimated_contribution_before_returns_and_route_cost"
+  },
+  {
+    "type": "date",
+    "table": "v_cash_daily",
+    "column": "txn_date"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "operating_in"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "operating_out"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "investing_in"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "investing_out"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "financing_in"
+  },
+  {
+    "type": "numeric",
+    "table": "v_cash_daily",
+    "column": "financing_out"
+  },
+  {
+    "type": "numeric(18,0)",
+    "table": "v_cash_daily",
+    "column": "external_net"
+  },
+  {
+    "type": "numeric(18,0)",
+    "table": "v_cash_daily",
+    "column": "balance_change"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_accounts",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "cash_accounts",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "cash_accounts",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "cash_accounts",
+    "column": "account_type"
+  },
+  {
+    "type": "boolean",
+    "table": "cash_accounts",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "cash_accounts",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "cash_movements",
+    "column": "txn_date"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "account_id"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "direction"
+  },
+  {
+    "type": "numeric(18,0)",
+    "table": "cash_movements",
+    "column": "amount"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "flow_class"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "kind"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "counterparty"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "route_id"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "customer_id"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "sale_id"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "receivable_id"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "expense_id"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "source_ref"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "transfer_group"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "reverses_id"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "idempotency_key"
+  },
+  {
+    "type": "text",
+    "table": "cash_movements",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "cash_movements",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "cash_movements",
+    "column": "created_by"
+  },
+  {
+    "type": "uuid",
+    "table": "employee_attendance",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "employee_attendance",
+    "column": "employee_id"
+  },
+  {
+    "type": "date",
+    "table": "employee_attendance",
+    "column": "work_date"
+  },
+  {
+    "type": "time without time zone",
+    "table": "employee_attendance",
+    "column": "start_time"
+  },
+  {
+    "type": "time without time zone",
+    "table": "employee_attendance",
+    "column": "end_time"
+  },
+  {
+    "type": "numeric(3,1)",
+    "table": "employee_attendance",
+    "column": "day_fraction"
+  },
+  {
+    "type": "text",
+    "table": "employee_attendance",
+    "column": "status"
+  },
+  {
+    "type": "integer",
+    "table": "employee_attendance",
+    "column": "early_leave_minutes"
+  },
+  {
+    "type": "integer",
+    "table": "employee_attendance",
+    "column": "makeup_minutes"
+  },
+  {
+    "type": "text",
+    "table": "employee_attendance",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "employee_attendance",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "v_inventory_latest",
+    "column": "material_id"
+  },
+  {
+    "type": "text",
+    "table": "v_inventory_latest",
+    "column": "material_code"
+  },
+  {
+    "type": "text",
+    "table": "v_inventory_latest",
+    "column": "material_name"
+  },
+  {
+    "type": "text",
+    "table": "v_inventory_latest",
+    "column": "base_unit"
+  },
+  {
+    "type": "date",
+    "table": "v_inventory_latest",
+    "column": "snapshot_date"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "v_inventory_latest",
+    "column": "qty_on_hand"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "v_inventory_latest",
+    "column": "min_stock_qty"
+  },
+  {
+    "type": "boolean",
+    "table": "v_inventory_latest",
+    "column": "is_low"
+  },
+  {
+    "type": "date",
+    "table": "v_daily_route_profit",
+    "column": "day"
+  },
+  {
+    "type": "uuid",
+    "table": "v_daily_route_profit",
+    "column": "route_id"
+  },
+  {
+    "type": "text",
+    "table": "v_daily_route_profit",
+    "column": "route_name"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "net_sales"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "estimated_material_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "returns_amount"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "returns_affecting_revenue"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "route_expenses"
+  },
+  {
+    "type": "numeric",
+    "table": "v_daily_route_profit",
+    "column": "estimated_route_contribution"
+  },
+  {
+    "type": "uuid",
+    "table": "compensation_policy_drafts",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "compensation_policy_drafts",
+    "column": "policy_code"
+  },
+  {
+    "type": "text",
+    "table": "compensation_policy_drafts",
+    "column": "title"
+  },
+  {
+    "type": "text",
+    "table": "compensation_policy_drafts",
+    "column": "status"
+  },
+  {
+    "type": "date",
+    "table": "compensation_policy_drafts",
+    "column": "proposed_on"
+  },
+  {
+    "type": "date",
+    "table": "compensation_policy_drafts",
+    "column": "effective_from"
+  },
+  {
+    "type": "jsonb",
+    "table": "compensation_policy_drafts",
+    "column": "details"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "compensation_policy_drafts",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "employees",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "employees",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "employees",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "employees",
+    "column": "role_group"
+  },
+  {
+    "type": "boolean",
+    "table": "employees",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "employees",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "employee_compensation_terms",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "employee_compensation_terms",
+    "column": "employee_id"
+  },
+  {
+    "type": "date",
+    "table": "employee_compensation_terms",
+    "column": "effective_from"
+  },
+  {
+    "type": "date",
+    "table": "employee_compensation_terms",
+    "column": "effective_to"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "employee_compensation_terms",
+    "column": "monthly_salary"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "employee_compensation_terms",
+    "column": "monthly_allowance"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "employee_compensation_terms",
+    "column": "monthly_attendance_bonus"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "employee_compensation_terms",
+    "column": "overtime_rate_per_hour"
+  },
+  {
+    "type": "numeric(8,2)",
+    "table": "employee_compensation_terms",
+    "column": "default_overtime_hours_per_day"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "employee_compensation_terms",
+    "column": "meal_cost_per_day"
+  },
+  {
+    "type": "numeric(8,2)",
+    "table": "employee_compensation_terms",
+    "column": "costing_days_per_month"
+  },
+  {
+    "type": "text",
+    "table": "employee_compensation_terms",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "employee_compensation_terms",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "fixed_costs",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "fixed_costs",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "fixed_costs",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "fixed_costs",
+    "column": "category"
+  },
+  {
+    "type": "text",
+    "table": "fixed_costs",
+    "column": "cost_type"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "fixed_costs",
+    "column": "monthly_amount_standard"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "fixed_costs",
+    "column": "monthly_amount_min"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "fixed_costs",
+    "column": "monthly_amount_max"
+  },
+  {
+    "type": "numeric(10,2)",
+    "table": "fixed_costs",
+    "column": "baseline_flour_kg_min"
+  },
+  {
+    "type": "numeric(10,2)",
+    "table": "fixed_costs",
+    "column": "baseline_flour_kg_max"
+  },
+  {
+    "type": "numeric(10,2)",
+    "table": "fixed_costs",
+    "column": "step_flour_kg"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "fixed_costs",
+    "column": "step_monthly_amount"
+  },
+  {
+    "type": "date",
+    "table": "fixed_costs",
+    "column": "effective_from"
+  },
+  {
+    "type": "date",
+    "table": "fixed_costs",
+    "column": "effective_to"
+  },
+  {
+    "type": "boolean",
+    "table": "fixed_costs",
+    "column": "is_active"
+  },
+  {
+    "type": "text",
+    "table": "fixed_costs",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "fixed_costs",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "assets",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "assets",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "assets",
+    "column": "name"
+  },
+  {
+    "type": "numeric(16,2)",
+    "table": "assets",
+    "column": "acquisition_cost"
+  },
+  {
+    "type": "integer",
+    "table": "assets",
+    "column": "useful_life_months"
+  },
+  {
+    "type": "text",
+    "table": "assets",
+    "column": "depreciation_method"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "assets",
+    "column": "monthly_depreciation"
+  },
+  {
+    "type": "date",
+    "table": "assets",
+    "column": "in_service_date"
+  },
+  {
+    "type": "boolean",
+    "table": "assets",
+    "column": "is_active"
+  },
+  {
+    "type": "text",
+    "table": "assets",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "assets",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "production_daily",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "production_daily",
+    "column": "production_date"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily",
+    "column": "gross_profit_estimate"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily",
+    "column": "direct_labor_cost_estimate"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily",
+    "column": "management_cost_estimate"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily",
+    "column": "fixed_overhead_cost_estimate"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily",
+    "column": "contribution_before_route_estimate"
+  },
+  {
+    "type": "text",
+    "table": "production_daily",
+    "column": "estimate_status"
+  },
+  {
+    "type": "text",
+    "table": "production_daily",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "production_daily",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "production_daily_items",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "production_daily_items",
+    "column": "production_daily_id"
+  },
+  {
+    "type": "uuid",
+    "table": "production_daily_items",
+    "column": "product_id"
+  },
+  {
+    "type": "text",
+    "table": "production_daily_items",
+    "column": "item_label"
+  },
+  {
+    "type": "numeric(14,3)",
+    "table": "production_daily_items",
+    "column": "reported_qty"
+  },
+  {
+    "type": "text",
+    "table": "production_daily_items",
+    "column": "reported_unit"
+  },
+  {
+    "type": "numeric(14,3)",
+    "table": "production_daily_items",
+    "column": "estimated_output_qty"
+  },
+  {
+    "type": "text",
+    "table": "production_daily_items",
+    "column": "estimated_output_unit"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "production_daily_items",
+    "column": "estimated_gross_profit"
+  },
+  {
+    "type": "boolean",
+    "table": "production_daily_items",
+    "column": "is_estimate"
+  },
+  {
+    "type": "text",
+    "table": "production_daily_items",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "production_daily_items",
+    "column": "created_at"
+  },
+  {
+    "type": "text",
+    "table": "v_current_labor_costs",
+    "column": "role_group"
+  },
+  {
+    "type": "numeric",
+    "table": "v_current_labor_costs",
+    "column": "estimated_monthly_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_current_labor_costs",
+    "column": "estimated_daily_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_monthly_overhead_summary",
+    "column": "fixed_operating_costs"
+  },
+  {
+    "type": "numeric",
+    "table": "v_monthly_overhead_summary",
+    "column": "depreciation_costs"
+  },
+  {
+    "type": "numeric",
+    "table": "v_monthly_overhead_summary",
+    "column": "total_monthly_overhead"
+  },
+  {
+    "type": "text",
+    "table": "order_product_name_rules",
+    "column": "alias"
+  },
+  {
+    "type": "text",
+    "table": "order_product_name_rules",
+    "column": "scope"
+  },
+  {
+    "type": "text",
+    "table": "order_product_name_rules",
+    "column": "canonical_name"
+  },
+  {
+    "type": "uuid",
+    "table": "order_product_name_rules",
+    "column": "product_id"
+  },
+  {
+    "type": "text[]",
+    "table": "order_product_name_rules",
+    "column": "member_skus"
+  },
+  {
+    "type": "text",
+    "table": "order_product_name_rules",
+    "column": "order_unit"
+  },
+  {
+    "type": "integer",
+    "table": "order_product_name_rules",
+    "column": "pieces_per_order_unit"
+  },
+  {
+    "type": "text",
+    "table": "order_product_name_rules",
+    "column": "note"
+  },
+  {
+    "type": "date",
+    "table": "order_product_name_rules",
+    "column": "confirmed_on"
+  },
+  {
+    "type": "uuid",
+    "table": "materials",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "materials",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "materials",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "materials",
+    "column": "base_unit"
+  },
+  {
+    "type": "text",
+    "table": "materials",
+    "column": "category"
+  },
+  {
+    "type": "boolean",
+    "table": "materials",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "materials",
+    "column": "created_at"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "materials",
+    "column": "min_stock_qty"
+  },
+  {
+    "type": "uuid",
+    "table": "sale_items",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "sale_items",
+    "column": "sale_id"
+  },
+  {
+    "type": "uuid",
+    "table": "sale_items",
+    "column": "product_id"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "sale_items",
+    "column": "qty"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sale_items",
+    "column": "unit_price"
+  },
+  {
+    "type": "numeric(7,4)",
+    "table": "sale_items",
+    "column": "discount_pct"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sale_items",
+    "column": "line_amount"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "sale_items",
+    "column": "qty_delivered"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "sale_items",
+    "column": "qty_returned"
+  },
+  {
+    "type": "uuid",
+    "table": "sales",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "sales",
+    "column": "sale_date"
+  },
+  {
+    "type": "uuid",
+    "table": "sales",
+    "column": "customer_id"
+  },
+  {
+    "type": "uuid",
+    "table": "sales",
+    "column": "route_id"
+  },
+  {
+    "type": "text",
+    "table": "sales",
+    "column": "invoice_no"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sales",
+    "column": "gross_amount"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sales",
+    "column": "discount_amount"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sales",
+    "column": "collected_amount"
+  },
+  {
+    "type": "text",
+    "table": "sales",
+    "column": "payment_status"
+  },
+  {
+    "type": "text",
+    "table": "sales",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "sales",
+    "column": "created_at"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "sales",
+    "column": "net_amount"
+  },
+  {
+    "type": "uuid",
+    "table": "suppliers",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "suppliers",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "suppliers",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "suppliers",
+    "column": "phone"
+  },
+  {
+    "type": "text",
+    "table": "suppliers",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "suppliers",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "material_prices",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "material_prices",
+    "column": "material_id"
+  },
+  {
+    "type": "uuid",
+    "table": "material_prices",
+    "column": "supplier_id"
+  },
+  {
+    "type": "date",
+    "table": "material_prices",
+    "column": "effective_date"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "material_prices",
+    "column": "package_price"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "material_prices",
+    "column": "package_qty"
+  },
+  {
+    "type": "text",
+    "table": "material_prices",
+    "column": "package_unit"
+  },
+  {
+    "type": "numeric(14,6)",
+    "table": "material_prices",
+    "column": "unit_cost"
+  },
+  {
+    "type": "text",
+    "table": "material_prices",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "material_prices",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "products",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "products",
+    "column": "sku"
+  },
+  {
+    "type": "text",
+    "table": "products",
+    "column": "name"
+  },
+  {
+    "type": "text",
+    "table": "products",
+    "column": "sale_unit"
+  },
+  {
+    "type": "numeric(12,3)",
+    "table": "products",
+    "column": "pack_qty"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "products",
+    "column": "list_price"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "products",
+    "column": "wholesale_price"
+  },
+  {
+    "type": "text",
+    "table": "products",
+    "column": "category"
+  },
+  {
+    "type": "boolean",
+    "table": "products",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "products",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "recipes",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "recipes",
+    "column": "product_id"
+  },
+  {
+    "type": "integer",
+    "table": "recipes",
+    "column": "version_no"
+  },
+  {
+    "type": "date",
+    "table": "recipes",
+    "column": "effective_date"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "recipes",
+    "column": "yield_qty"
+  },
+  {
+    "type": "text",
+    "table": "recipes",
+    "column": "yield_unit"
+  },
+  {
+    "type": "text",
+    "table": "recipes",
+    "column": "note"
+  },
+  {
+    "type": "boolean",
+    "table": "recipes",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "recipes",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "recipe_items",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "recipe_items",
+    "column": "recipe_id"
+  },
+  {
+    "type": "uuid",
+    "table": "recipe_items",
+    "column": "material_id"
+  },
+  {
+    "type": "numeric(14,6)",
+    "table": "recipe_items",
+    "column": "qty"
+  },
+  {
+    "type": "text",
+    "table": "recipe_items",
+    "column": "unit"
+  },
+  {
+    "type": "numeric(7,4)",
+    "table": "recipe_items",
+    "column": "wastage_pct"
+  },
+  {
+    "type": "text",
+    "table": "recipe_items",
+    "column": "note"
+  },
+  {
+    "type": "uuid",
+    "table": "routes",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "routes",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "routes",
+    "column": "name"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "routes",
+    "column": "logistics_cost_per_day"
+  },
+  {
+    "type": "text",
+    "table": "routes",
+    "column": "note"
+  },
+  {
+    "type": "boolean",
+    "table": "routes",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "routes",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "customers",
+    "column": "id"
+  },
+  {
+    "type": "text",
+    "table": "customers",
+    "column": "code"
+  },
+  {
+    "type": "text",
+    "table": "customers",
+    "column": "name"
+  },
+  {
+    "type": "uuid",
+    "table": "customers",
+    "column": "route_id"
+  },
+  {
+    "type": "text",
+    "table": "customers",
+    "column": "phone"
+  },
+  {
+    "type": "text",
+    "table": "customers",
+    "column": "customer_type"
+  },
+  {
+    "type": "numeric(7,4)",
+    "table": "customers",
+    "column": "default_discount_pct"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "customers",
+    "column": "credit_limit"
+  },
+  {
+    "type": "boolean",
+    "table": "customers",
+    "column": "is_active"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "customers",
+    "column": "created_at"
+  },
+  {
+    "type": "text",
+    "table": "customers",
+    "column": "note"
+  },
+  {
+    "type": "uuid",
+    "table": "returns",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "returns",
+    "column": "return_date"
+  },
+  {
+    "type": "uuid",
+    "table": "returns",
+    "column": "sale_id"
+  },
+  {
+    "type": "uuid",
+    "table": "returns",
+    "column": "customer_id"
+  },
+  {
+    "type": "uuid",
+    "table": "returns",
+    "column": "route_id"
+  },
+  {
+    "type": "uuid",
+    "table": "returns",
+    "column": "product_id"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "returns",
+    "column": "qty"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "returns",
+    "column": "refund_amount"
+  },
+  {
+    "type": "text",
+    "table": "returns",
+    "column": "reason"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "returns",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "expenses",
+    "column": "id"
+  },
+  {
+    "type": "date",
+    "table": "expenses",
+    "column": "expense_date"
+  },
+  {
+    "type": "text",
+    "table": "expenses",
+    "column": "category"
+  },
+  {
+    "type": "uuid",
+    "table": "expenses",
+    "column": "route_id"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "expenses",
+    "column": "amount"
+  },
+  {
+    "type": "boolean",
+    "table": "expenses",
+    "column": "is_fixed"
+  },
+  {
+    "type": "text",
+    "table": "expenses",
+    "column": "note"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "expenses",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "receivables",
+    "column": "id"
+  },
+  {
+    "type": "uuid",
+    "table": "receivables",
+    "column": "sale_id"
+  },
+  {
+    "type": "uuid",
+    "table": "receivables",
+    "column": "customer_id"
+  },
+  {
+    "type": "date",
+    "table": "receivables",
+    "column": "due_date"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "receivables",
+    "column": "amount"
+  },
+  {
+    "type": "numeric(14,2)",
+    "table": "receivables",
+    "column": "paid_amount"
+  },
+  {
+    "type": "text",
+    "table": "receivables",
+    "column": "status"
+  },
+  {
+    "type": "timestamp with time zone",
+    "table": "receivables",
+    "column": "created_at"
+  },
+  {
+    "type": "uuid",
+    "table": "v_latest_material_cost",
+    "column": "material_id"
+  },
+  {
+    "type": "text",
+    "table": "v_latest_material_cost",
+    "column": "material_code"
+  },
+  {
+    "type": "text",
+    "table": "v_latest_material_cost",
+    "column": "material_name"
+  },
+  {
+    "type": "date",
+    "table": "v_latest_material_cost",
+    "column": "effective_date"
+  },
+  {
+    "type": "numeric(14,6)",
+    "table": "v_latest_material_cost",
+    "column": "unit_cost"
+  },
+  {
+    "type": "text",
+    "table": "v_latest_material_cost",
+    "column": "package_unit"
+  },
+  {
+    "type": "uuid",
+    "table": "v_recipe_cost",
+    "column": "recipe_id"
+  },
+  {
+    "type": "uuid",
+    "table": "v_recipe_cost",
+    "column": "product_id"
+  },
+  {
+    "type": "text",
+    "table": "v_recipe_cost",
+    "column": "sku"
+  },
+  {
+    "type": "text",
+    "table": "v_recipe_cost",
+    "column": "product_name"
+  },
+  {
+    "type": "integer",
+    "table": "v_recipe_cost",
+    "column": "version_no"
+  },
+  {
+    "type": "date",
+    "table": "v_recipe_cost",
+    "column": "effective_date"
+  },
+  {
+    "type": "numeric(14,4)",
+    "table": "v_recipe_cost",
+    "column": "yield_qty"
+  },
+  {
+    "type": "text",
+    "table": "v_recipe_cost",
+    "column": "yield_unit"
+  },
+  {
+    "type": "numeric",
+    "table": "v_recipe_cost",
+    "column": "batch_material_cost"
+  },
+  {
+    "type": "numeric",
+    "table": "v_recipe_cost",
+    "column": "material_cost_per_yield_unit"
+  }
+]

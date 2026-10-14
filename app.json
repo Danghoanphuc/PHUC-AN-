@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Phúc An",
+    "slug": "phuc-an-mobile",
+    "version": "1.0.0",
+    "scheme": "phucan",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.phucan.ops"
+    },
+    "android": {
+      "package": "com.phucan.ops"
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 160,
+          "backgroundColor": "#F5F4EE"
+        }
+      ]
+    ],
+    "icon": "./assets/icon.png"
+  }
+}

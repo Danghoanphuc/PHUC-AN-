@@ -1,0 +1,43 @@
+{
+  "name": "phuc-an-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "build:web": "expo export --platform web",
+    "test": "node --test --test-reporter=spec tests/database.test.mjs",
+    "test:smoke": "node tests/build-live-smoke.mjs && node tests/check-live-smoke.mjs",
+    "build:ios": "expo export --platform ios --output-dir dist-ios",
+    "test:ui": "playwright test"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.9",
+    "@playwright/test": "1.64.0",
+    "prettier": "3.9.10",
+    "sharp": "0.35.3"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "15.1.1",
+    "@supabase/supabase-js": "2.117.3",
+    "@types/react": "19.2.18",
+    "expo": "57.0.28",
+    "expo-crypto": "57.0.4",
+    "expo-font": "57.0.4",
+    "expo-linking": "57.0.12",
+    "expo-secure-store": "57.0.4",
+    "expo-splash-screen": "57.0.10",
+    "expo-status-bar": "57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "5.7.0",
+    "react-native-web": "0.21.4",
+    "typescript": "6.0.3"
+  }
+}

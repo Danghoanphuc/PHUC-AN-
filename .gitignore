@@ -1,0 +1,12 @@
+node_modules/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+test-output/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+dist-ios/
+playwright-report/
