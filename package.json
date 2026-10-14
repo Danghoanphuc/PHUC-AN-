@@ -11,7 +11,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "build:web": "expo export --platform web",
-    "test": "node --test --test-reporter=spec tests/database.test.mjs",
+    "test": "node --test --test-reporter=spec tests/database.test.mjs tests/account-server.test.mjs",
     "test:smoke": "node tests/build-live-smoke.mjs && node tests/check-live-smoke.mjs",
     "build:ios": "expo export --platform ios --output-dir dist-ios",
     "test:ui": "playwright test"

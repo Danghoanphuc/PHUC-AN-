@@ -9,23 +9,25 @@ Triển khai ngày 14/10/2026. Expo SDK 57.0.28, React Native 0.86.3, React 19.2
 - Khách hàng: danh mục/hồ sơ, điện thoại, địa chỉ/tuyến, công nợ, ghi tương tác, lịch hẹn, hoàn thành việc và tạo đơn từ khách.
 - Giá: sỉ/lẻ/giá riêng theo khách, đơn vị giá tách số bì đặt, thêm giá mới theo hiệu lực.
 - Thêm: thu nợ khách, trả hàng sau bán, thanh toán nhà cung cấp, đảo thu/chi, PO/nhận nguyên liệu, kiểm kê, danh sách cần đối chiếu, nhân sự và gán tuyến cho staff.
-- Tài khoản: email/mật khẩu, liên kết email không mật khẩu, khung SMS chỉ bật khi project có provider, đặt/đổi mật khẩu và đăng xuất.
+- Tài khoản: số điện thoại + mật khẩu; owner cấp/đặt lại mật khẩu, người dùng tự đổi mật khẩu và đăng xuất.
 
 Giao diện có safe area, cuộn biểu mẫu tránh bàn phím iOS, nút touch tối thiểu cho thao tác chính, tên accessibility, modal ẩn nền khỏi screen reader, trạng thái tải/lỗi và kéo tải lại. Khi mở lại app, đọc lại membership để kiểm tra quyền hiện tại.
 
-## Tài khoản thật và xác minh
+## Tài khoản bằng số điện thoại
 
-Owner đầu tiên đã được đăng ký qua Auth API theo email người dùng cung cấp. Yêu cầu gửi email xác minh trả HTTP 200. Không tự đánh dấu email_confirmed_at, không sinh hoặc công khai mật khẩu tạm, không lấy token email của người dùng.
+Đăng nhập chỉ cần số di động Việt Nam và mật khẩu được owner cấp. Không yêu cầu SMS, email, liên kết xác minh hay tự đăng ký. Số 0… và +84… quy về cùng một định danh.
 
-private.approved_invites chứa email/role/contact do quản trị duyệt. Trigger auth.users chỉ tạo membership khi email đã xác minh đúng whitelist, với thời hạn invite 14 ngày. Mỗi invite gắn một auth user; xác minh lại không khôi phục tài khoản đã bị khóa hoặc tự đổi role. approved_invites không expose và không cấp quyền đọc cho client. Số điện thoại liên hệ không được coi là số đã xác minh SMS.
+Supabase phone provider đang tắt. App dùng alias nội bộ dạng 84…@phone.phucan.invalid cho password Auth; alias không phải email liên hệ, không gửi thư và không hiển thị trong giao diện. Mật khẩu chỉ được Supabase Auth băm/lưu, không lưu trong bảng nghiệp vụ, audit hay hàng chờ retry. Session/RLS tiếp tục dùng Auth UUID.
 
-Trong app, có thể dùng “Nhận liên kết đăng nhập email”. Nếu redirect URL/deep link của project chưa được cấu hình cho app, sao chép địa chỉ liên kết trong email và dán vào “Tôi đã có liên kết xác minh”. App chỉ nhận token hash từ endpoint auth của đúng project; không gửi credential sang URL khác. Cách này dùng API verifyOtp của Supabase, không tự xác minh danh tính. [Tài liệu passwordless](https://supabase.com/docs/guides/auth/auth-email-passwordless).
+Owner đầu tiên đặt mật khẩu trên màn hình thiết lập mở từ liên kết riêng ở bản xem thử. Token ngẫu nhiên 256 bit, chỉ lưu hash trong private.phone_owner_setup, gắn đúng UUID/số điện thoại, hết hạn sau 72 giờ và dùng một lần. Không commit token hoặc mật khẩu. Liên kết mất tác dụng khi đã có owner hoạt động.
 
-Sau khi owner xác minh email và đăng nhập, vào Thêm → Đội ngũ → Cấp quyền người mới. Người mới dùng đúng email được duyệt để kích hoạt trong app, rồi owner phân công tuyến cho staff. RPC invite_member cấp quyền chờ, không tự gửi email thay cho người mới; người dùng yêu cầu liên kết từ màn hình đăng nhập. Owner có thể đổi role/khóa member đã tồn tại.
+Thêm → Đội ngũ & phân quyền → Cấp tài khoản mới: nhập tên, số, mật khẩu ban đầu và manager/staff. Owner có thể đặt lại mật khẩu, khóa hoặc phân công tuyến. Mỗi người tự đổi trong Thêm → Đổi mật khẩu. Mật khẩu cấp/đổi cần 12–128 ký tự. Không bắt buộc đổi lần đầu.
 
-SMS đang tắt ở project. Muốn dùng số điện thoại đăng nhập cần cấu hình SMS provider và xác minh số qua OTP; không tự bật auto-confirm. Sử dụng email trong thời gian này.
+Edge Function phone-accounts dùng Auth Admin ở máy chủ. Mọi thao tác tạo/reset kiểm tra JWT bằng Auth.getUser và membership owner đang hoạt động; reset không áp dụng cho owner. verify_jwt=false để hỗ trợ bootstrap, nhưng hàm tự xác thực đầy đủ. RPC provisioning chỉ cấp execute cho service_role, wrapper SECURITY INVOKER và implementation private. Yêu cầu tạo dùng UUID cố định theo actor/request_key; retry không đổi mật khẩu, role hay tái kích hoạt tài khoản cũ.
 
-Supabase Advisor hiện báo **Leaked Password Protection Disabled** ở Auth. Kiểm tra và bật trong cấu hình Auth phù hợp với plan trước khi triển khai chính sách đăng nhập mật khẩu rộng rãi; không giả định đã bật. Owner có thể ưu tiên đăng nhập bằng liên kết email. [Hướng dẫn bảo vệ mật khẩu](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+Trigger/email invite cũ đã bị vô hiệu hóa trong migration mới. Hồ sơ hiển thị số điện thoại, client không được sửa số đăng nhập. Chưa có chức năng đổi số đăng nhập trong phiên bản này.
+
+Advisor vẫn báo Leaked Password Protection Disabled; đây là cấu hình Auth hiện có, chưa được bật. [Tài liệu bảo vệ mật khẩu](https://supabase.com/docs/guides/auth/password-security).
 
 ## Session và retry giao dịch
 
@@ -44,13 +46,14 @@ Mỗi RPC ghi có request_key. Trước gửi, lưu yêu cầu đang chạy theo
 ## Kiểm chứng
 
 - TypeScript: `npm run typecheck` pass.
-- DB: 34 kịch bản pass, gồm whitelist xác minh email, không tái kích hoạt member bị khóa, owner-only invite và các invariant bán/mua/tiền từ giai đoạn trước.
-- UI: 4 kịch bản Playwright trên viewport 390×844 pass: login/navigation/CRM, tạo/xác nhận/giao đơn, tạo PO và phân quyền staff, timeout giữ request key và retry qua Thêm.
+- Backend: 40 kịch bản pass, gồm DB, phân quyền service-only, bootstrap một lần, kiểm tra JWT/owner của Edge Function và các invariant bán/mua/tiền.
+- UI: 5 kịch bản Playwright trên viewport 390×844 pass: đăng nhập số điện thoại, cấp/reset tài khoản, tự đổi mật khẩu, CRM, đơn bán/mua, phân quyền và retry giao dịch.
 - iOS bundle: export thành công; Expo Doctor 21/21 pass.
 - Auth/Data API thật: settings trả phone=false/email=true; anon bị chặn HTTP 401 ở customers/products/cash_movements/member_profiles.
+- Edge Function thật: yêu cầu cấp tài khoản không đăng nhập trả 401; bootstrap sai token trả 403. SQL smoke trên Supabase: 28 assertions pass và rollback toàn bộ fixture. Màn hình owner setup đã kiểm tra tại bản preview; token được xóa khỏi URL sau khi mở.
 - Snapshot ảnh ở test-output/screenshots chỉ chứa fixture kiểm thử, không phải hồ sơ hoặc giao dịch thật. Test không bypass Auth/RLS trong code app; mock chỉ được cài trong Playwright.
 
-Chưa thực hiện UI end-to-end bằng tài khoản người dùng thật vì bước xác minh email do người dùng hoàn thành; chưa chạy trên iPhone vật lý/Simulator. Chưa stress-test nhiều connection, Apple distribution, SMS, push notification, máy in hay offline sync.
+Chưa thực hiện UI end-to-end bằng tài khoản người dùng thật vì owner chưa đặt mật khẩu lần đầu; chưa chạy trên iPhone vật lý/Simulator. Chưa stress-test nhiều connection, Apple distribution, SMS, push notification, máy in hay offline sync.
 
 `npm audit` ghi nhận 24 cảnh báo dependency transitive trong toolchain Expo/Metro/Xcode tại các phiên bản đang dùng. Có báo cáo local trong test-output/dependency-audit.json; không dùng audit fix --force để hạ Expo/RN xuống SDK cũ không tương thích. Tiếp tục theo dõi bản vá upstream; không expose Metro dev server ra internet hoặc đưa vào production hosting. App data/auth RLS được kiểm chứng riêng, không suy ra audit dependency đã sạch từ kết quả RLS.
 
@@ -58,5 +61,6 @@ Chưa thực hiện UI end-to-end bằng tài khoản người dùng thật vì 
 
 - mobile_onboarding_v1: whitelist email, profile, trigger xác minh, RPC invite/list và route label cho khách giao trực tiếp.
 - invitation_lookup_indexes: index FK của invite.
+- phone_password_accounts: onboarding bằng số điện thoại, bootstrap riêng và RPC service-only; thay thế onboarding email.
 
 Version local khớp lịch sử remote sau triển khai. Không commit email/phone whitelist ban đầu vào migration/source; chỉ ghi trực tiếp theo chỉ định của người dùng. Không chạy db reset/push một DB mới chỉ bằng các migration bổ sung trong repo; baseline migrations cũ chưa được export đầy đủ.

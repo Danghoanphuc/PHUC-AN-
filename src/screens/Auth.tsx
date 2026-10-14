@@ -3,107 +3,60 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { Button, C, Icon, Segment, s } from '../components/ui';
+import * as Linking from 'expo-linking';
+import { Button, C, Icon, s } from '../components/ui';
 import { supabase } from '../lib/supabase';
-import { projectUrl, publishableKey } from '../lib/config';
 import { errorMessage } from '../lib/format';
-import { acceptAuthLink } from '../lib/auth-link';
+import { phoneIdentity } from '../lib/phone';
+import { manageAccount } from '../lib/accounts';
 export function Auth() {
-  const [email, setEmail] = useState(''),
-    [password, setPassword] = useState(''),
-    [phone, setPhone] = useState(''),
-    [otp, setOtp] = useState('');
-  const [method, setMethod] = useState('email'),
-    [signup, setSignup] = useState(false),
-    [sent, setSent] = useState(false),
-    [phoneEnabled, setPhoneEnabled] = useState(false),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState(''),
-    [notice, setNotice] = useState('');
-  const [link, setLink] = useState(''),
-    [showLink, setShowLink] = useState(false);
-  async function sendLink() {
-    setBusy(true);
-    setError('');
-    try {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-        throw Error('Nhập email trước khi nhận liên kết.');
-      const { error } = await supabase.auth.signInWithOtp({ email: email.trim() });
-      if (error) throw error;
-      setShowLink(true);
-      setNotice(
-        'Email đã gửi. Sao chép địa chỉ liên kết trong email và dán bên dưới để đăng nhập ngay trong ứng dụng.',
-      );
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const [phone, setPhone] = useState(''),
+    [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState(''),
+    [setup, setSetup] = useState('');
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
   useEffect(() => {
-    void fetch(`${projectUrl}/auth/v1/settings`, { headers: { apikey: publishableKey } })
-      .then((r) => r.json())
-      .then((r) => setPhoneEnabled(r.external?.phone === true))
-      .catch(() => {});
+    const accept = (url: string) => {
+      const token = /[#&]owner_setup=([a-f0-9]{64})(?:&|$)/.exec(url)?.[1];
+      if (token) {
+        setSetup(token);
+        if (Platform.OS === 'web') window.history.replaceState(null, '', window.location.pathname);
+      }
+    };
+    void Linking.getInitialURL().then((url) => {
+      if (url) accept(url);
+    });
+    const listener = Linking.addEventListener('url', (e) => accept(e.url));
+    return () => listener.remove();
   }, []);
   async function submit() {
     if (busy) return;
     setBusy(true);
     setError('');
-    setNotice('');
     try {
-      if (method === 'phone') {
-        if (!phoneEnabled)
-          throw Error(
-            'Đăng nhập SMS chưa được cấu hình. Vui lòng dùng email đã được quản trị cấp quyền.',
-          );
-        const p = phone
-          .trim()
-          .replace(/[\s.-]/g, '')
-          .replace(/^0/, '+84');
-        if (!/^\+[1-9]\d{8,14}$/.test(p))
-          throw Error('Nhập số điện thoại hợp lệ, ví dụ 09… hoặc +84…');
-        if (sent) {
-          const { error } = await supabase.auth.verifyOtp({
-            phone: p,
-            token: otp.trim(),
-            type: 'sms',
-          });
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.auth.signInWithOtp({ phone: p });
-          if (error) throw error;
-          setSent(true);
-          setNotice('Mã xác minh đã gửi. Không chia sẻ mã với người khác.');
-        }
-      } else {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-          throw Error('Vui lòng nhập email hợp lệ.');
-        if (signup) {
-          if (password.length < 12) throw Error('Mật khẩu cần ít nhất 12 ký tự.');
-          const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
-          if (error) throw error;
-          if (!data.session) {
-            setSignup(false);
-            setPassword('');
-            setNotice(
-              'Mở email xác nhận, sau đó quay lại đăng nhập. Tài khoản chỉ truy cập được khi quản trị đã cấp quyền.',
-            );
-          }
-        } else {
-          const { error } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
-          });
-          if (error) throw error;
-        }
+      const email = phoneIdentity(phone);
+      if (setup) {
+        if (password.length < 12) throw Error('Mật khẩu cần ít nhất 12 ký tự.');
+        if (password !== confirm) throw Error('Hai mật khẩu chưa khớp.');
+        await manageAccount({
+          action: 'bootstrap',
+          token: setup,
+          phone,
+          password,
+          full_name: 'Chủ Phúc An',
+        });
+        setSetup('');
       }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw Error('Số điện thoại hoặc mật khẩu chưa đúng.');
+      setPassword('');
+      setConfirm('');
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -151,164 +104,75 @@ export function Auth() {
             </Text>
           </View>
           <View style={[s.card, { padding: 22, gap: 18 }]}>
-            <Text style={s.h2}>{signup ? 'Kích hoạt tài khoản' : 'Chào bạn, đăng nhập nhé'}</Text>
-            <Segment
-              values={[
-                { value: 'email', label: 'Email' },
-                { value: 'phone', label: 'Điện thoại' },
-              ]}
-              selected={method}
-              onSelect={(v) => {
-                setMethod(v);
-                setError('');
-                setSignup(false);
-                setSent(false);
-              }}
-            />
-            {method === 'email' ? (
-              <>
-                <View style={{ gap: 7 }}>
-                  <Text style={s.muted}>Email</Text>
-                  <TextInput
-                    accessibilityLabel="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    textContentType="username"
-                    placeholder="Email được cấp quyền"
-                    style={s.input}
-                  />
-                </View>
-                <View style={{ gap: 7 }}>
-                  <Text style={s.muted}>Mật khẩu</Text>
-                  <TextInput
-                    accessibilityLabel="Mật khẩu"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    textContentType={signup ? 'newPassword' : 'password'}
-                    autoComplete={signup ? 'new-password' : 'current-password'}
-                    autoCapitalize="none"
-                    style={s.input}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <TextInput
-                  accessibilityLabel="Số điện thoại"
-                  value={phone}
-                  editable={!sent}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  placeholder="Số điện thoại"
-                  style={s.input}
-                />
-                {sent && (
-                  <TextInput
-                    accessibilityLabel="Mã xác minh SMS"
-                    value={otp}
-                    onChangeText={setOtp}
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    placeholder="Mã xác minh"
-                    style={s.input}
-                  />
-                )}{' '}
-                {!phoneEnabled && (
-                  <View style={s.banner}>
-                    <Text style={s.muted}>
-                      SMS chưa được cấu hình. Dùng email đã được quản trị cấp quyền để đăng nhập
-                      trước.
-                    </Text>
-                  </View>
-                )}
-              </>
+            <Text style={s.h2}>
+              {setup ? 'Đặt mật khẩu chủ doanh nghiệp' : 'Chào bạn, đăng nhập nhé'}
+            </Text>
+            {setup && (
+              <Text style={s.muted}>
+                Nhập số điện thoại đã đăng ký và đặt mật khẩu từ 12 ký tự. Bạn chỉ cần thiết lập một
+                lần.
+              </Text>
+            )}
+            <View style={{ gap: 7 }}>
+              <Text style={s.muted}>Số điện thoại</Text>
+              <TextInput
+                accessibilityLabel="Số điện thoại"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                textContentType="username"
+                placeholder="Số điện thoại được cấp"
+                style={s.input}
+              />
+            </View>
+            <View style={{ gap: 7 }}>
+              <Text style={s.muted}>Mật khẩu</Text>
+              <TextInput
+                accessibilityLabel="Mật khẩu"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                textContentType={setup ? 'newPassword' : 'password'}
+                autoComplete={setup ? 'new-password' : 'current-password'}
+                autoCapitalize="none"
+                autoCorrect={false}
+                onSubmitEditing={() => void submit()}
+                style={s.input}
+              />
+            </View>
+            {!!setup && (
+              <TextInput
+                accessibilityLabel="Nhập lại mật khẩu"
+                value={confirm}
+                onChangeText={setConfirm}
+                secureTextEntry
+                textContentType="newPassword"
+                autoCapitalize="none"
+                style={s.input}
+                placeholder="Nhập lại mật khẩu"
+              />
             )}
             {!!error && (
               <Text accessibilityRole="alert" style={[s.text, { color: C.red }]}>
                 {error}
               </Text>
             )}
-            {!!notice && (
-              <Text accessibilityRole="alert" style={s.text}>
-                {notice}
-              </Text>
-            )}
             {busy ? (
               <ActivityIndicator color={C.green} />
             ) : (
               <Button
-                title={
-                  method === 'phone'
-                    ? sent
-                      ? 'Xác minh số điện thoại'
-                      : 'Nhận mã xác minh'
-                    : signup
-                      ? 'Tạo tài khoản'
-                      : 'Đăng nhập'
-                }
-                disabled={method === 'phone' && !phoneEnabled}
+                title={setup ? 'Lưu mật khẩu & đăng nhập' : 'Đăng nhập'}
+                disabled={!phone || !password}
                 onPress={() => void submit()}
                 icon="arrow-forward-outline"
               />
             )}
-            {method === 'email' && (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  setSignup(!signup);
-                  setError('');
-                  setNotice('');
-                }}
-              >
-                <Text style={[s.muted, { textAlign: 'center', color: C.green }]}>
-                  {signup ? 'Đã có tài khoản? Đăng nhập' : 'Lần đầu sử dụng? Kích hoạt tài khoản'}
-                </Text>
-              </Pressable>
-            )}
-            {method === 'email' && (
-              <>
-                <Button
-                  title="Nhận liên kết đăng nhập email"
-                  secondary
-                  disabled={busy}
-                  onPress={() => void sendLink()}
-                />
-                <Pressable accessibilityRole="button" onPress={() => setShowLink(!showLink)}>
-                  <Text style={[s.muted, { textAlign: 'center' }]}>
-                    Tôi đã có liên kết xác minh
-                  </Text>
-                </Pressable>
-                {showLink && (
-                  <>
-                    <TextInput
-                      accessibilityLabel="Liên kết xác minh email"
-                      value={link}
-                      onChangeText={setLink}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      secureTextEntry
-                      placeholder="Dán liên kết từ email tại đây"
-                      style={s.input}
-                    />
-                    <Button
-                      title="Xác minh & đăng nhập"
-                      disabled={busy || !link}
-                      onPress={() => {
-                        setBusy(true);
-                        setError('');
-                        void acceptAuthLink(link)
-                          .catch((e) => setError(errorMessage(e)))
-                          .finally(() => setBusy(false));
-                      }}
-                    />
-                  </>
-                )}
-              </>
+            {!setup && (
+              <Text style={[s.muted, { textAlign: 'center' }]}>
+                Dùng tài khoản do chủ doanh nghiệp cấp.{'\n'}Quên mật khẩu? Liên hệ chủ doanh nghiệp
+                để đặt lại.
+              </Text>
             )}
           </View>
           <View style={[s.row, { alignSelf: 'center' }]}>

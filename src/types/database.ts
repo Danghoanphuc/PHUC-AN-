@@ -2577,10 +2577,15 @@ export type Database = {
         Args: { payload: Json; request_key: string }
         Returns: string
       }
+      phone_setup_target: {
+        Args: { phone: string; token_hash: string }
+        Returns: string
+      }
       post_delivery: {
         Args: { payload: Json; request_key: string }
         Returns: string
       }
+      provision_phone_member: { Args: { payload: Json }; Returns: undefined }
       receive_purchase_order: {
         Args: { payload: Json; request_key: string }
         Returns: string
@@ -2753,3 +2758,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

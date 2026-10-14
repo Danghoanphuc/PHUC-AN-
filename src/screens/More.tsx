@@ -5,6 +5,7 @@ import { useApp, managerRole } from '../lib/context';
 import { decimal, labels, money, quantity, shortId, today } from '../lib/format';
 import { pendingMutation, submitMutation, type Pending } from '../lib/mutations';
 import { supabase } from '../lib/supabase';
+import { manageAccount } from '../lib/accounts';
 function reviewText(kind: string, ref: string, raw: unknown) {
   const d = (raw ?? {}) as Record<string, unknown>;
   return kind === 'material_unit_review'
@@ -22,16 +23,11 @@ function reviewText(kind: string, ref: string, raw: unknown) {
 export function More() {
   const a = useApp(),
     [page, setPage] = useState('menu'),
-    [pending, setPending] = useState<Pending | null>(null),
-    [invites, setInvites] = useState<{ email: string; role: string; accepted: boolean }[]>([]);
+    [pending, setPending] = useState<Pending | null>(null);
   const manager = managerRole(a.role),
     profile = a.data.profiles.find((p) => p.user_id === a.userId);
   useEffect(() => {
     void pendingMutation(a.userId).then(setPending);
-    if (a.role === 'owner')
-      void supabase.rpc('list_member_invites').then(({ data }) => {
-        if (Array.isArray(data)) setInvites(data as unknown as typeof invites);
-      });
   }, [a.userId, a.data, a.role]);
   const accountOptions = a.data.accounts
     .filter((x) => x.is_active)
@@ -54,13 +50,14 @@ export function More() {
   }
   function invite() {
     a.openForm({
-      title: 'Cấp quyền nhân sự',
+      title: 'Cấp tài khoản nhân sự',
       description:
-        'Nhập email của người dùng. Sau khi xác minh email trong app, tài khoản sẽ nhận đúng vai trò đã được chủ doanh nghiệp duyệt.',
+        'Cấp số điện thoại và mật khẩu ban đầu từ 12 ký tự. Người dùng đăng nhập ngay và có thể tự đổi mật khẩu.',
       fields: [
-        { name: 'email', label: 'Email', required: true },
         { name: 'name', label: 'Họ tên', required: true },
-        { name: 'phone', label: 'Điện thoại liên hệ' },
+        { name: 'phone', label: 'Số điện thoại', required: true },
+        { name: 'password', label: 'Mật khẩu ban đầu', required: true, secure: true },
+        { name: 'confirm', label: 'Nhập lại mật khẩu', required: true, secure: true },
         {
           name: 'role',
           label: 'Vai trò',
@@ -72,11 +69,16 @@ export function More() {
         },
       ],
       submit: async (v, key) => {
-        await submitMutation(
-          'invite_member',
-          { email: v.email, role: v.role, full_name: v.name, contact_phone: v.phone },
-          key,
-        );
+        if ((v.password?.length ?? 0) < 12) throw Error('Cần tối thiểu 12 ký tự.');
+        if (v.password !== v.confirm) throw Error('Hai mật khẩu chưa khớp.');
+        await manageAccount({
+          action: 'create',
+          phone: v.phone,
+          password: v.password,
+          role: v.role,
+          full_name: v.name,
+          request_key: key,
+        });
       },
     });
   }
@@ -266,7 +268,7 @@ export function More() {
         )}
         {page === 'team' && (
           <>
-            <Button title="Cấp quyền người mới" icon="person-add-outline" onPress={invite} />
+            <Button title="Cấp tài khoản mới" icon="person-add-outline" onPress={invite} />
             {a.data.members.map((m) => {
               const p = a.data.profiles.find((p) => p.user_id === m.user_id);
               return (
@@ -276,7 +278,8 @@ export function More() {
                     <Tag value={m.role} />
                   </View>
                   <Text style={s.muted}>
-                    {p?.email ?? 'Hồ sơ chưa có email'} · {m.active ? 'Đang hoạt động' : 'Đã khóa'}
+                    {p?.contact_phone ?? 'Chưa có số điện thoại'} ·{' '}
+                    {m.active ? 'Đang hoạt động' : 'Đã khóa'}
                   </Text>
                   {m.user_id !== a.userId && (
                     <Button
@@ -316,6 +319,41 @@ export function More() {
                       }
                     />
                   )}{' '}
+                  {m.role !== 'owner' && (
+                    <Button
+                      title="Đặt lại mật khẩu"
+                      secondary
+                      onPress={() =>
+                        a.openForm({
+                          title: 'Đặt lại mật khẩu nhân viên',
+                          description:
+                            'Cấp mật khẩu mới từ 12 ký tự và thông báo trực tiếp cho người dùng.',
+                          fields: [
+                            {
+                              name: 'password',
+                              label: 'Mật khẩu mới',
+                              required: true,
+                              secure: true,
+                            },
+                            {
+                              name: 'confirm',
+                              label: 'Nhập lại mật khẩu',
+                              required: true,
+                              secure: true,
+                            },
+                          ],
+                          submit: async (v) => {
+                            if (v.password !== v.confirm) throw Error('Hai mật khẩu chưa khớp.');
+                            await manageAccount({
+                              action: 'reset',
+                              user_id: m.user_id,
+                              password: v.password,
+                            });
+                          },
+                        })
+                      }
+                    />
+                  )}
                   {m.role === 'staff' && (
                     <Button
                       title="Phân công tuyến"
@@ -344,14 +382,6 @@ export function More() {
                 </Card>
               );
             })}
-            {invites
-              .filter((i) => !i.accepted)
-              .map((i) => (
-                <Card key={i.email}>
-                  <Text style={s.h3}>{i.email}</Text>
-                  <Text style={s.muted}>{labels[i.role]} · Chờ xác minh email</Text>
-                </Card>
-              ))}
           </>
         )}
         {page === 'cash' && (
@@ -477,7 +507,6 @@ export function More() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={s.h2}>{profile?.full_name || 'Đội ngũ Phúc An'}</Text>
-            <Text style={s.muted}>{a.email}</Text>
             <Text style={s.muted}>{profile?.contact_phone}</Text>
           </View>
         </View>
@@ -539,14 +568,15 @@ export function More() {
         secondary
         onPress={() =>
           a.openForm({
-            title: 'Đặt / đổi mật khẩu',
+            title: 'Đổi mật khẩu',
             description: 'Dùng mật khẩu từ 12 ký tự. Không chia sẻ mật khẩu với người khác.',
             fields: [
               { name: 'password', label: 'Mật khẩu mới', required: true, secure: true },
               { name: 'confirm', label: 'Nhập lại mật khẩu', required: true, secure: true },
             ],
             submit: async (v) => {
-              if ((v.password?.length ?? 0) < 12) throw Error('Cần tối thiểu 12 ký tự.');
+              if ((v.password?.length ?? 0) < 12 || (v.password?.length ?? 0) > 128)
+                throw Error('Mật khẩu cần từ 12 đến 128 ký tự.');
               if (v.password !== v.confirm) throw Error('Hai mật khẩu chưa khớp.');
               const { error } = await supabase.auth.updateUser({ password: v.password ?? '' });
               if (error) throw error;

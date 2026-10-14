@@ -12,12 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import * as Linking from 'expo-linking';
 import type { Session } from '@supabase/supabase-js';
 import { AppContext, type Detail, type Page } from './src/lib/context';
 import { loadData, emptyData, type Data } from './src/lib/data';
 import { supabase, type Role, type Row } from './src/lib/supabase';
-import { acceptAuthLink } from './src/lib/auth-link';
 import { errorMessage } from './src/lib/format';
 import { Button, C, Empty, FormSheet, Icon, s, type FormSpec } from './src/components/ui';
 import { Auth } from './src/screens/Auth';
@@ -143,16 +141,6 @@ function Workspace() {
     return () => subscription.remove();
   }, [refresh, session?.user.id]);
   useEffect(() => {
-    const handle = (url: string) => {
-      void acceptAuthLink(url).catch((e) => setError(errorMessage(e)));
-    };
-    void Linking.getInitialURL().then((url) => {
-      if (url && (url.includes('access_token=') || url.includes('/auth/v1/verify'))) handle(url);
-    });
-    const subscription = Linking.addEventListener('url', (event) => handle(event.url));
-    return () => subscription.remove();
-  }, []);
-  useEffect(() => {
     if (!toast) return;
     const timeout = setTimeout(() => setToast(''), 4500);
     return () => clearTimeout(timeout);
@@ -263,11 +251,12 @@ function Workspace() {
               <>
                 <Empty
                   title="Đang chờ cấp quyền"
-                  body="Tài khoản đã đăng nhập nhưng chưa có quyền hoạt động. Chủ doanh nghiệp cần duyệt đúng email của bạn."
+                  body="Tài khoản chưa có quyền hoạt động hoặc đã bị khóa. Liên hệ chủ doanh nghiệp để được cấp quyền."
                   icon="shield-checkmark-outline"
                 />
                 <Text style={[s.muted, { textAlign: 'center' }]}>
-                  {session.user.email ?? session.user.phone}
+                  {data.profiles.find((p) => p.user_id === session.user.id)?.contact_phone ??
+                    'Tài khoản nội bộ'}
                 </Text>
                 {!!error && (
                   <Text accessibilityRole="alert" style={{ color: C.red }}>

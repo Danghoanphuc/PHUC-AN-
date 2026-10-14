@@ -257,19 +257,44 @@ scenario('expense-only day is visible; missing recipe cost remains unknown rathe
  assert.equal((await q('select unit_material_cost_snapshot from public.sale_item_costs where sale_item_id=$1',[s.item.id]))[0].unit_material_cost_snapshot,null);
  assert.equal((await q("select estimated_route_contribution from public.v_daily_route_profit where day='2026-10-14' and route_id=$1",[ids.route]))[0].estimated_route_contribution,null);
 });
-scenario('only approved, verified email receives membership and re-verification does not reactivate revoked access',async()=>{
+scenario('retired email verification cannot grant membership',async()=>{
  await admin();await q("insert into private.approved_invites(email,role,contact_phone) values('approved@example.test','staff','+84000000000')");
  await q("update auth.users set email='approved@example.test' where id=$1",[ids.outsider]);
  assert.equal((await q('select * from public.app_members where user_id=$1',[ids.outsider])).length,0);
  await q('update auth.users set email_confirmed_at=now() where id=$1',[ids.outsider]);
- assert.equal((await q('select role from public.app_members where user_id=$1',[ids.outsider]))[0].role,'staff');
- await q('update public.app_members set active=false where user_id=$1',[ids.outsider]);
- await q('update auth.users set email_confirmed_at=now() where id=$1',[ids.outsider]);
- assert.equal((await q('select active from public.app_members where user_id=$1',[ids.outsider]))[0].active,false);
+ assert.equal((await q('select role from public.app_members where user_id=$1',[ids.outsider])).length,0);
 });
-scenario('manager cannot invite; owner approves manager/staff but cannot invite another owner',async()=>{
- await fails(()=>rpc('invite_member',{email:'new@example.test',role:'staff'}),/Owner required/);
- await as('owner');await rpc('invite_member',{email:'new@example.test',role:'staff',full_name:'Test name'});
- const rows=(await q('select public.list_member_invites() result'))[0].result;assert.equal(rows[0].email,'new@example.test');
- await fails(()=>rpc('invite_member',{email:'new-owner@example.test',role:'owner'}),/manager\/staff/);
+scenario('clients cannot invoke service provisioning, bootstrap lookup or retired email invites',async()=>{
+ for(const who of ['staff','manager','owner']) {
+  await as(who);
+  await fails(()=>q("select public.provision_phone_member('{}')"),/permission denied/);
+  await fails(()=>q("select public.phone_setup_target('hash','+84912345678')"),/permission denied/);
+  await fails(()=>rpc('invite_member',{email:'new@example.test',role:'staff'}),/permission denied/);
+ }
+});
+scenario('service provisioning requires active owner and cannot promote staff or reactivate accounts on retry',async()=>{
+ await admin(); await q("update auth.users set email='84912345678@phone.phucan.invalid',email_confirmed_at=now() where id=$1",[ids.outsider]);
+ await db.exec('set role service_role');
+ const p={user_id:ids.outsider,actor:ids.owner,phone:'+84912345678',role:'staff',full_name:'Test'};
+ await fails(()=>q('select public.provision_phone_member($1)',[JSON.stringify({...p,actor:ids.manager})]),/Owner required/);
+ await fails(()=>q('select public.provision_phone_member($1)',[JSON.stringify({...p,role:'owner'})]),/Owner required/);
+ await q('select public.provision_phone_member($1)',[JSON.stringify(p)]);
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.outsider]);await db.exec('set role service_role');
+ await q('select public.provision_phone_member($1)',[JSON.stringify({...p,role:'manager'})]);
+ await admin();const m=(await q('select * from public.app_members where user_id=$1',[ids.outsider]))[0];assert.equal(m.active,false);assert.equal(m.role,'staff');
+});
+scenario('bootstrap is scoped to a phone, expires, consumes once and refuses a second owner',async()=>{
+ await admin();await q('update public.app_members set active=false where role=\'owner\'');
+ await q("update auth.users set email='84912345678@phone.phucan.invalid',email_confirmed_at=now() where id=$1",[ids.outsider]);
+ const h='a'.repeat(64);await q("insert into private.phone_owner_setup(user_id,token_hash,phone,expires_at) values($1,$2,'+84912345678',now()+interval '1 hour')",[ids.outsider,h]);
+ await db.exec('set role service_role');
+ assert.equal((await q('select public.phone_setup_target($1,$2) id',[h,'+84987654321']))[0].id,null);
+ assert.equal((await q('select public.phone_setup_target($1,$2) id',[h,'+84912345678']))[0].id,ids.outsider);
+ await admin();await q("update private.phone_owner_setup set expires_at=now()-interval '1 second' where user_id=$1",[ids.outsider]);await db.exec('set role service_role');
+ assert.equal((await q('select public.phone_setup_target($1,$2) id',[h,'+84912345678']))[0].id,null);
+ await admin();await q("update private.phone_owner_setup set expires_at=now()+interval '1 hour' where user_id=$1",[ids.outsider]);await db.exec('set role service_role');
+ const p={user_id:ids.outsider,token_hash:h,phone:'+84912345678',role:'owner'};
+ await q('select public.provision_phone_member($1)',[JSON.stringify(p)]);
+ await fails(()=>q('select public.provision_phone_member($1)',[JSON.stringify(p)]),/Invalid setup/);
+ assert.equal((await q('select public.phone_setup_target($1,$2) id',[h,'+84912345678']))[0].id,null);
 });

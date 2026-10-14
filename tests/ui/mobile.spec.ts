@@ -16,7 +16,7 @@ async function mock(page: Page, role = 'owner') {
         user_id: id(1),
         full_name: 'Nhóm kiểm thử Phúc An',
         email: 'test@example.test',
-        contact_phone: '',
+        contact_phone: '+84912345678',
         updated_at: new Date().toISOString(),
       },
     ],
@@ -132,7 +132,22 @@ async function mock(page: Page, role = 'owner') {
         expires_in: 3600,
         user,
       });
-    if (url.pathname === '/auth/v1/user') return reply(user);
+    if (url.pathname === '/auth/v1/user') {
+      if (req.method() === 'PUT') calls.push({ name: 'change-password', body });
+      return reply(user);
+    }
+    if (url.pathname === '/functions/v1/phone-accounts') {
+      calls.push({ name: 'phone-accounts', body });
+      if (body.action === 'create') {
+        tables.app_members.push({ user_id: id(99), role: body.role, active: true });
+        tables.member_profiles.push({
+          user_id: id(99),
+          full_name: body.full_name,
+          contact_phone: body.phone,
+        });
+      }
+      return reply({ user_id: id(99) });
+    }
     if (url.pathname === '/auth/v1/logout') return reply({});
     const name = url.pathname.split('/').at(-1) ?? '';
     if (url.pathname.includes('/rpc/')) {
@@ -212,7 +227,9 @@ async function mock(page: Page, role = 'owner') {
         return reply(null, 201);
       }
       if (name === 'app_members' && url.searchParams.has('user_id'))
-        return reply(tables.app_members);
+        return reply(
+          tables.app_members.filter((m) => `eq.${m.user_id}` === url.searchParams.get('user_id')),
+        );
       return reply(tables[name] ?? []);
     }
     return reply({});
@@ -221,11 +238,49 @@ async function mock(page: Page, role = 'owner') {
 }
 async function login(page: Page) {
   await page.goto('/');
-  await page.getByLabel('Email', { exact: true }).fill('test@example.test');
+  await page.getByLabel('Số điện thoại', { exact: true }).fill('0912345678');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('TEST_PASSWORD_ONLY');
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByText('Chào ngày mới.')).toBeVisible();
 }
+test('phone-only login, owner provision and self password change', async ({ page }) => {
+  const { calls } = await mock(page);
+  await page.goto('/');
+  await expect(page.getByLabel('Email', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Nhận mã xác minh', { exact: true })).toHaveCount(0);
+  await login(page);
+  await page.getByRole('tab', { name: 'Thêm', exact: true }).click();
+  await page.getByText('Đội ngũ & phân quyền', { exact: true }).click();
+  await page.getByRole('button', { name: 'Cấp tài khoản mới', exact: true }).click();
+  await page.getByLabel('Họ tên', { exact: true }).fill('Nhân viên mới');
+  await page.getByLabel('Số điện thoại', { exact: true }).fill('0987654321');
+  await page.getByLabel('Mật khẩu ban đầu', { exact: true }).fill('INITIAL_TEST_PASSWORD');
+  await page.getByLabel('Nhập lại mật khẩu', { exact: true }).fill('INITIAL_TEST_PASSWORD');
+  await page.getByRole('button', { name: 'Lưu thông tin', exact: true }).click();
+  await expect(page.getByText('Nhân viên mới', { exact: true })).toBeVisible();
+  expect(calls.find((c) => c.name === 'phone-accounts')?.body).toMatchObject({
+    action: 'create',
+    phone: '+84987654321',
+    role: 'staff',
+  });
+  expect(
+    await page.evaluate(() => JSON.stringify(sessionStorage).includes('INITIAL_TEST_PASSWORD')),
+  ).toBe(false);
+  await page.getByRole('button', { name: 'Đặt lại mật khẩu', exact: true }).click();
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('RESET_TEST_PASSWORD');
+  await page.getByLabel('Nhập lại mật khẩu', { exact: true }).fill('RESET_TEST_PASSWORD');
+  await page.getByRole('button', { name: 'Lưu thông tin', exact: true }).click();
+  expect(calls.filter((c) => c.name === 'phone-accounts').at(-1)?.body.action).toBe('reset');
+  await page.getByLabel('Quay lại mục Thêm').click();
+  await page.getByRole('button', { name: 'Đổi mật khẩu', exact: true }).click();
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('NEW_SELF_TEST_PASSWORD');
+  await page.getByLabel('Nhập lại mật khẩu', { exact: true }).fill('NEW_SELF_TEST_PASSWORD');
+  await page.getByRole('button', { name: 'Lưu thông tin', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Đổi mật khẩu', exact: true })).toBeVisible();
+  expect(calls.find((c) => c.name === 'change-password')?.body.password).toBe(
+    'NEW_SELF_TEST_PASSWORD',
+  );
+});
 test('iPhone layout, real navigation, customer profile and CRM write', async ({ page }) => {
   const { calls, tables } = await mock(page);
   const errors: string[] = [];

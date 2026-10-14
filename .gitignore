@@ -10,3 +10,4 @@ web-build/
 *.tsbuildinfo
 dist-ios/
 playwright-report/
+.local/
