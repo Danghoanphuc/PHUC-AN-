@@ -1,5 +1,7 @@
 # Phúc An Mobile
 
+Bản web: **https://phuc-an.pages.dev** · [Cách cập nhật Cloudflare Pages](docs/mobile/cloudflare-pages.md).
+
 Ứng dụng Expo React Native dành cho chủ, quản lý và nhân viên Phúc An. Ưu tiên iOS; giao diện tiếng Việt cho bán hàng, CRM, hồ sơ khách, giá, mua nguyên liệu, tồn kho và công nợ.
 
 Dự án bắt đầu bằng khảo sát DB hiện có, trước khi triển khai giao diện và thay đổi schema.
