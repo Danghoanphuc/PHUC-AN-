@@ -165,6 +165,12 @@ async function mock(page: Page, role = 'owner') {
     if (url.pathname.includes('/rpc/')) {
       calls.push({ name, body });
       const p = body?.payload;
+      if (name === 'update_retail_customer_contact') {
+        const customer = tables.customers.find((c) => c.id === p.customer_id)!;
+        customer.name = p.name;
+        customer.phone = p.phone?.replace(/[\s().-]/g, '') || null;
+        return reply(customer.id);
+      }
       if (name === 'pos_summary')
         return reply({
           balance: 40000,
@@ -460,6 +466,42 @@ test('manager receives a cash handover into a company account', async ({ page })
     action: 'received',
     destination_id: id(8),
   });
+});
+test('staff updates retail customer contact from a completed order without changing the order', async ({
+  page,
+}) => {
+  const { tables, calls } = await mock(page, 'staff');
+  tables.customers[0].customer_type = 'Khách lẻ';
+  tables.customer_orders.push({
+    id: id(50),
+    customer_id: id(2),
+    route_id: id(3),
+    status: 'completed',
+    delivery_date: day,
+    created_at: new Date().toISOString(),
+    version: 3,
+    discount_pct: 0,
+    note: 'Đơn đã giao',
+  });
+  const original = JSON.stringify(tables.customer_orders);
+  await login(page, true);
+  await page.getByRole('tab', { name: 'Đơn hàng', exact: true }).click();
+  await page.getByText('Khách kiểm thử', { exact: true }).click();
+  await page.getByRole('button', { name: 'Cập nhật thông tin khách', exact: true }).click();
+  await page.getByLabel('Tên khách', { exact: true }).fill('Chị Lan');
+  await page.getByLabel('Số điện thoại', { exact: true }).fill('0912 345 678');
+  await page.getByRole('button', { name: 'Lưu thông tin khách', exact: true }).click();
+  await expect(page.getByText('Chị Lan', { exact: true })).toBeVisible();
+  await expect(page.getByText('0912345678', { exact: true })).toBeVisible();
+  expect(
+    calls.find((c) => c.name === 'update_retail_customer_contact')!.body.payload,
+  ).toMatchObject({
+    customer_id: id(2),
+    name: 'Chị Lan',
+    expected_name: 'Khách kiểm thử',
+    expected_phone: null,
+  });
+  expect(JSON.stringify(tables.customer_orders)).toBe(original);
 });
 test('phone-only login, owner provision and self password change', async ({ page }) => {
   const { calls } = await mock(page);

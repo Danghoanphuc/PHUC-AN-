@@ -4,6 +4,7 @@ import { Button, Card, Empty, Tag, s } from '../components/ui';
 import { useApp, managerRole } from '../lib/context';
 import { dateLabel, decimal, money, quantity, shortId, today } from '../lib/format';
 import { submitMutation } from '../lib/mutations';
+import { CustomerContact } from '../components/CustomerContact';
 export function SaleDetail({ id }: { id: string }) {
   const a = useApp(),
     sale = a.data.sales.find((s) => s.id === id);
@@ -81,6 +82,7 @@ export function SaleDetail({ id }: { id: string }) {
         <Tag value={sale.payment_status} />
       </View>
       <Text style={s.title}>{customer?.name}</Text>
+      <CustomerContact customer={customer} />
       <Text style={s.muted}>Ngày bán {dateLabel(sale.sale_date)}</Text>
       <Card>
         <View style={s.between}>

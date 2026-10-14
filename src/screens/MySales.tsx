@@ -192,9 +192,9 @@ export function MySales() {
             </Text>
           ))}
           {!!x.note && <Text style={s.text}>Ghi chú: {x.note}</Text>}
-          {a.role !== 'staff' && (
+          {a.data.sales.some((sale) => sale.id === x.id) && (
             <Button
-              title="Chi tiết / trả hàng"
+              title={a.role === 'staff' ? 'Chi tiết bán hàng' : 'Chi tiết / trả hàng'}
               secondary
               onPress={() => a.openDetail({ kind: 'sale', id: x.id })}
             />

@@ -54,6 +54,10 @@ begin
  if (select count(*) from public.cash_movements where transfer_group=close_id)<>2 then raise exception 'Handover duplicate';end if;
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
  if (public.pos_summary()->>'balance')::numeric<>1000 then raise exception 'Shortage erased';end if;
+ update public.customers set customer_type='Khách lẻ',phone=null where id=new_customer;
+ p:=jsonb_build_object('customer_id',new_customer,'name','Known retail fixture','phone','0912 345 678','expected_name','Live POS partner','expected_phone',null);
+ perform public.update_retail_customer_contact(p,'live-contact-key');perform public.update_retail_customer_contact(p,'live-contact-key');
+ if not exists(select 1 from public.customers where id=new_customer and name='Known retail fixture' and phone='0912345678') then raise exception 'Retail contact failed';end if;
 end $pos$;
 rollback;
-select 'Live POS sale, collection, scope, close, handover and idempotency passed; fixtures rolled back' as verification;
+select 'Live POS sale, collection, scope, close, handover, retail contact and idempotency passed; fixtures rolled back' as verification;

@@ -27,6 +27,7 @@ import {
 } from '../lib/format';
 import { submitMutation } from '../lib/mutations';
 import { supabase, type Row } from '../lib/supabase';
+import { CustomerContact } from '../components/CustomerContact';
 
 export function Orders() {
   const a = useApp(),
@@ -249,6 +250,7 @@ export function OrderDetail({ id }: { id: string }) {
         <Tag value={o.status} />
       </View>
       <Text style={s.title}>{customer?.name ?? 'Khách hàng'}</Text>
+      <CustomerContact customer={customer} />
       <Card>
         <Text style={s.muted}>
           Giao {dateLabel(o.delivery_date)} ·{' '}

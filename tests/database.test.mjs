@@ -45,6 +45,31 @@ scenario('staff POS delivers an existing confirmed order with version checks and
  await rpc('post_pos_sale',{...p,version:3});
 });
 const q=async(sql,params=[]) => (await db.query(sql,params)).rows;
+scenario('retail contact edit preserves posted amounts and links, audits changes and retries safely',async()=>{
+ const sold=await sale({collected:40000});await admin();
+ await q("update public.customers set customer_type='Khách lẻ',phone=null where id=$1",[ids.customer]);
+ const beforeSale=(await q('select * from public.sales where id=$1',[sold.id]))[0];
+ const beforeCash=await q('select * from public.cash_movements where sale_id=$1',[sold.id]);
+ await as('staff');const payload={customer_id:ids.customer,name:'  Khách mới  ',phone:'0912 345 678',expected_name:'Test wholesale',expected_phone:null};
+ assert.equal(await rpc('update_retail_customer_contact',payload,'contact-fixed-key'),ids.customer);
+ assert.equal(await rpc('update_retail_customer_contact',payload,'contact-fixed-key'),ids.customer);
+ assert.equal((await q('select name,phone from public.customers where id=$1',[ids.customer]))[0].phone,'0912345678');
+ await fails(()=>rpc('update_retail_customer_contact',payload),/Version conflict/);
+ await admin();assert.deepEqual((await q('select * from public.sales where id=$1',[sold.id]))[0],beforeSale);
+ assert.deepEqual(await q('select * from public.cash_movements where sale_id=$1',[sold.id]),beforeCash);
+ assert.equal((await q("select count(*) n from public.audit_events where action='update_retail_customer_contact'"))[0].n,1);
+});
+scenario('retail contact edit denies foreign scope, inactive membership and restricted fields',async()=>{
+ const payload={customer_id:ids.customer,name:'Tên mới',phone:'abc',expected_name:'Test wholesale',expected_phone:null};
+ await as('staff');await fails(()=>rpc('update_retail_customer_contact',payload),/chỉ dành cho khách lẻ/);
+ await admin();await q("update public.customers set customer_type='Khách lẻ',phone=null where id=$1",[ids.customer]);await as('staff');
+ await fails(()=>rpc('update_retail_customer_contact',payload),/Số điện thoại/);
+ await fails(()=>rpc('update_retail_customer_contact',{...payload,phone:null,name:' '}),/Tên khách/);
+ await fails(()=>rpc('update_retail_customer_contact',{...payload,credit_limit:999999}),/Chỉ được cập nhật/);
+ await fails(()=>rpc('update_retail_customer_contact',{...payload,customer_id:ids.otherCustomer}),/outside assigned scope/);
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.staff]);await as('staff');
+ await fails(()=>rpc('update_retail_customer_contact',payload),/Not authorized/);
+});
 scenario('POS close snapshots wallet, keeps shortages and transfers cash exactly once after manager receipt',async()=>{
  await as('staff');
  await rpc('post_pos_sale',{customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]});

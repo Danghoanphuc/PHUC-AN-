@@ -105,6 +105,8 @@ Manager được INSERT/UPDATE các danh mục được cấp policy, gán route
 
 ## CRM và dữ liệu đọc
 
+`update_retail_customer_contact(payload,request_key)` nhận `{customer_id,name,phone,expected_name,expected_phone}`. Cập nhật tên/điện thoại trên hồ sơ khách lẻ active trong phạm vi tài khoản; không đổi customer_id của đơn, giá, dòng hàng hay ledger. expected_* phải trùng dữ liệu hiện tại để tránh ghi đè. Số điện thoại được bỏ khoảng trắng/dấu phân cách; chấp nhận 8–15 chữ số và dấu + đầu, hoặc null. Staff được dùng RPC nhưng không được sửa các trường khác của khách. Có audit before/after và chống ghi trùng. Vì là hồ sơ chung, mọi đơn của cùng customer_id hiển thị thông tin mới; không tách khách theo từng đơn.
+
 customer_activities cho phép INSERT `{customer_id,kind:'call'|'visit'|'note',body,occurred_at?}`, created_by phải là auth.uid. customer_tasks cho phép INSERT việc cho bản thân (staff) hoặc thành viên khác (manager); staff chỉ sửa status của việc được giao trong phạm vi khách. Không cho sửa created_by.
 
 Đọc danh mục, customer_orders/requests/items, sales/items/returns/receivables bằng RLS. Manager đọc PO/receipts/payables, sale_item_costs, v_material_stock, cash views và data_review_issues. `v_material_stock.is_reconciled=false` hoặc baseline_date cũ phải được thể hiện rõ trong UX; qty NULL là chưa biết, không phải 0.

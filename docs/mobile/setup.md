@@ -62,8 +62,8 @@ Mỗi RPC ghi có request_key. Trước gửi, lưu yêu cầu đang chạy theo
 ## Kiểm chứng
 
 - TypeScript: `npm run typecheck` pass.
-- Backend: 47 kịch bản, gồm DB, phân quyền service-only, bootstrap một lần, JWT/owner, POS, bàn giao tiền/chênh lệch và idempotency.
-- UI: 10 kịch bản Playwright trên viewport 390×844: đăng nhập số điện thoại, cấp/reset tài khoản, CRM, đơn bán/mua, POS cố định footer, giỏ qua reload, chốt/nhận tiền và retry.
+- Backend: 49 kịch bản, gồm DB, phân quyền service-only, bootstrap một lần, JWT/owner, POS, bàn giao tiền/chênh lệch và idempotency.
+- UI: 11 kịch bản Playwright trên viewport 390×844: đăng nhập số điện thoại, cấp/reset tài khoản, CRM, đơn bán/mua, POS cố định footer, giỏ qua reload, chốt/nhận tiền và retry.
 - iOS bundle: export thành công; Expo Doctor 21/21 pass.
 - Auth/Data API thật: settings trả phone=false/email=true; anon bị chặn HTTP 401 ở customers/products/cash_movements/member_profiles.
 - Edge Function thật: yêu cầu cấp tài khoản không đăng nhập trả 401; bootstrap sai token trả 403. SQL smoke trên Supabase: 28 assertions pass và rollback toàn bộ fixture. Màn hình owner setup đã kiểm tra tại bản preview; token được xóa khỏi URL sau khi mở.
@@ -80,3 +80,4 @@ Owner đã hoạt động. Chưa thực hiện UI end-to-end bằng mật khẩu
 - phone_password_accounts: onboarding bằng số điện thoại, bootstrap riêng và RPC service-only; thay thế onboarding email.
 
 Version local khớp lịch sử remote sau triển khai. Không commit email/phone whitelist ban đầu vào migration/source; chỉ ghi trực tiếp theo chỉ định của người dùng. Không chạy db reset/push một DB mới chỉ bằng các migration bổ sung trong repo; baseline migrations cũ chưa được export đầy đủ.
+

@@ -2717,6 +2717,10 @@ export type Database = {
         Args: { payload: Json; request_key: string }
         Returns: string
       }
+      update_retail_customer_contact: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
