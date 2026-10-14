@@ -45,6 +45,37 @@ scenario('staff POS delivers an existing confirmed order with version checks and
  await rpc('post_pos_sale',{...p,version:3});
 });
 const q=async(sql,params=[]) => (await db.query(sql,params)).rows;
+scenario('POS close snapshots wallet, keeps shortages and transfers cash exactly once after manager receipt',async()=>{
+ await as('staff');
+ await rpc('post_pos_sale',{customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]});
+ const summary=(await q('select public.pos_summary() s'))[0].s;
+ assert.equal(Number(summary.balance),40000);assert.equal(summary.sales.length,1);assert.equal(summary.sales[0].items[0].pieces,10);
+ await fails(()=>rpc('submit_pos_close',{expected_amount:1,counted_amount:40000}),/Số dư/);
+ await fails(()=>rpc('submit_pos_close',{expected_amount:40000,counted_amount:39000}),/ghi chú/);
+ for(const n of ['NaN','Infinity',-1,1.5]) await fails(()=>rpc('submit_pos_close',{expected_amount:40000,counted_amount:n,note:'test'}),/không hợp lệ/);
+ const payload={expected_amount:40000,counted_amount:39000,note:'Thiếu 1.000 đang đối chiếu'};
+ const close=await rpc('submit_pos_close',payload,'close-fixed-key');assert.equal(await rpc('submit_pos_close',payload,'close-fixed-key'),close);
+ await fails(()=>rpc('review_pos_close',{close_id:close,action:'received',destination_id:ids.account}),/Not authorized/);
+ await fails(()=>q('update public.pos_cash_closes set counted_amount=0'),/permission denied/);
+ await as('manager');const review={close_id:close,action:'received',destination_id:ids.account};
+ await rpc('review_pos_close',review,'receive-fixed-key');await rpc('review_pos_close',review,'receive-fixed-key');
+ await admin();assert.equal((await q("select count(*) n from public.cash_movements where kind='pos_handover'"))[0].n,2);
+ await as('staff');assert.equal(Number((await q('select public.pos_summary() s'))[0].s.balance),1000);
+ await as('manager');assert.equal((await q('select public.pos_summary() s'))[0].s.sales.length,0);
+});
+scenario('POS close rejection permits recount, isolates staff and denies inactive users',async()=>{
+ await as('staff');await rpc('post_pos_sale',{customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]});
+ const payload={expected_amount:40000,counted_amount:40000};const close=await rpc('submit_pos_close',payload);
+ await fails(()=>rpc('submit_pos_close',payload),/duplicate key/);
+ await as('manager');await fails(()=>rpc('review_pos_close',{close_id:close,action:'rejected'}),/lý do/);
+ await rpc('review_pos_close',{close_id:close,action:'rejected',note:'Đếm lại'});
+ await as('staff');await rpc('submit_pos_close',payload);
+ await as('outsider');assert.equal((await q('select * from public.pos_cash_closes')).length,0);
+ await fails(()=>q('select public.pos_summary()'),/Not authorized/);
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.staff]);
+ await as('staff');assert.equal((await q('select * from public.pos_cash_closes')).length,0);
+ await fails(()=>q('select public.pos_summary()'),/Not authorized/);
+});
 async function as(who) {await db.exec('reset role');await q(`select set_config('request.jwt.claim.sub',$1,false)`,[ids[who]??'']);await db.exec('set role authenticated');}
 async function admin() {await db.exec('reset role');}
 let key=0;

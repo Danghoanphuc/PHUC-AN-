@@ -36,7 +36,7 @@ from public.products p join public.product_units u on u.product_id=p.id where p.
 insert into public.material_stock_baselines(material_id,opening_qty,ledger_cutoff,verified)
 values('00000000-0000-4000-8000-000000000013',100,clock_timestamp(),true);
 do $pos$
-declare s uuid;again uuid;p jsonb;new_customer uuid;failed boolean:=false;
+declare s uuid;again uuid;p jsonb;new_customer uuid;close_id uuid;failed boolean:=false;
 begin
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
  p:=jsonb_build_object('customer_id','00000000-0000-4000-8000-000000000007','expected_total',75000,'note','Live POS verification','lines',jsonb_build_array(jsonb_build_object('product_id','00000000-0000-4000-8000-000000000009','order_qty',1),jsonb_build_object('product_id','00000000-0000-4000-8000-000000000010','order_qty',1)));
@@ -46,6 +46,14 @@ begin
  new_customer:=public.create_pos_customer(jsonb_build_object('name','Live POS partner','route_id','00000000-0000-4000-8000-000000000005'),'live-pos-new-customer');
  if not exists(select 1 from public.customers where id=new_customer and assigned_to='00000000-0000-4000-8000-000000000003' and credit_limit=0) then raise exception 'POS customer scope incorrect';end if;
  begin perform public.post_pos_sale(p||jsonb_build_object('customer_id','00000000-0000-4000-8000-000000000008'),'live-pos-escape');exception when insufficient_privilege then failed:=true;end;if not failed then raise exception 'POS scope escaped';end if;
+ if (public.pos_summary()->>'balance')::numeric<>75000 then raise exception 'Wallet summary incorrect';end if;
+ close_id:=public.submit_pos_close('{"expected_amount":75000,"counted_amount":74000,"note":"Live shortage verification"}','live-close-key');
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+ p:=jsonb_build_object('close_id',close_id,'action','received','destination_id','00000000-0000-4000-8000-000000000015');
+ perform public.review_pos_close(p,'live-receive-key');perform public.review_pos_close(p,'live-receive-key');
+ if (select count(*) from public.cash_movements where transfer_group=close_id)<>2 then raise exception 'Handover duplicate';end if;
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
+ if (public.pos_summary()->>'balance')::numeric<>1000 then raise exception 'Shortage erased';end if;
 end $pos$;
 rollback;
-select 'Live POS sale, collection, customer scope and idempotency passed; fixtures rolled back' as verification;
+select 'Live POS sale, collection, scope, close, handover and idempotency passed; fixtures rolled back' as verification;

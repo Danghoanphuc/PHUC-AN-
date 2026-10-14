@@ -27,6 +27,7 @@ import { Prices } from './src/screens/Prices';
 import { SaleDetail } from './src/screens/Sales';
 import { More } from './src/screens/More';
 import { POS } from './src/screens/POS';
+import { MySales } from './src/screens/MySales';
 
 export default function App() {
   return (
@@ -229,6 +230,8 @@ function Workspace() {
     )
   ) : page === 'pos' ? (
     <POS />
+  ) : page === 'my-sales' ? (
+    <MySales />
   ) : page === 'home' ? (
     <Home />
   ) : page === 'orders' ? (

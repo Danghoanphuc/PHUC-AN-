@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 // Chunk native session JSON because a Supabase session can exceed SecureStore's per-value size.
-// Web keeps a session only in the current browser tab; no business data is persisted.
+// Web session, pending requests and actor-scoped POS drafts stay in the current tab.
 export const sessionStorageAdapter = {
   async getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web')

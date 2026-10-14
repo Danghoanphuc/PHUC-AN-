@@ -1354,6 +1354,80 @@ export type Database = {
           },
         ]
       }
+      pos_cash_closes: {
+        Row: {
+          business_date: string
+          counted_amount: number
+          created_at: string
+          destination_id: string | null
+          expected_amount: number
+          id: string
+          note: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          business_date?: string
+          counted_amount: number
+          created_at?: string
+          destination_id?: string | null
+          expected_amount: number
+          id?: string
+          note?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          business_date?: string
+          counted_amount?: number
+          created_at?: string
+          destination_id?: string | null
+          expected_amount?: number
+          id?: string
+          note?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_cash_closes_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "cash_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_cash_closes_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_balances"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "pos_cash_closes_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "app_members"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pos_cash_closes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_members"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       product_aliases: {
         Row: {
           alias_sku: string
@@ -2585,6 +2659,7 @@ export type Database = {
         Args: { phone: string; token_hash: string }
         Returns: string
       }
+      pos_summary: { Args: never; Returns: Json }
       post_delivery: {
         Args: { payload: Json; request_key: string }
         Returns: string
@@ -2614,6 +2689,10 @@ export type Database = {
         Args: { payload: Json; request_key: string }
         Returns: string
       }
+      review_pos_close: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
       save_customer_order: {
         Args: { payload: Json; request_key: string }
         Returns: string
@@ -2623,6 +2702,10 @@ export type Database = {
         Returns: string
       }
       set_selling_price: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
+      submit_pos_close: {
         Args: { payload: Json; request_key: string }
         Returns: string
       }

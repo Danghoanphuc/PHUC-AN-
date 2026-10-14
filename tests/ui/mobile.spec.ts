@@ -83,7 +83,17 @@ async function mock(page: Page, role = 'owner') {
           ],
     suppliers: role === 'staff' ? [] : [{ id: id(7), name: 'Nhà cung cấp kiểm thử' }],
     cash_accounts:
-      role === 'staff' ? [] : [{ id: id(8), name: 'Tiền mặt kiểm thử', is_active: true }],
+      role === 'staff'
+        ? []
+        : [
+            {
+              id: id(8),
+              code: 'TEST_CASH',
+              account_type: 'cash',
+              name: 'Tiền mặt kiểm thử',
+              is_active: true,
+            },
+          ],
     customer_orders: [],
     customer_order_items: [],
     customer_order_requests: [],
@@ -155,6 +165,41 @@ async function mock(page: Page, role = 'owner') {
     if (url.pathname.includes('/rpc/')) {
       calls.push({ name, body });
       const p = body?.payload;
+      if (name === 'pos_summary')
+        return reply({
+          balance: 40000,
+          sales: [
+            {
+              id: id(111),
+              sale_date: day,
+              created_at: new Date().toISOString(),
+              customer_name: 'Khách kiểm thử',
+              net_amount: 40000,
+              collected_amount: 40000,
+              note: 'Giao quầy trái',
+              items: [{ name: 'Bánh donut', pieces: 10, amount: 40000 }],
+            },
+          ],
+        });
+      if (name === 'submit_pos_close') {
+        tables.pos_cash_closes = [
+          {
+            id: id(120),
+            user_id: id(1),
+            business_date: day,
+            created_at: new Date().toISOString(),
+            expected_amount: p.expected_amount,
+            counted_amount: p.counted_amount,
+            note: p.note,
+            status: 'pending',
+          },
+        ];
+        return reply(id(120));
+      }
+      if (name === 'review_pos_close') {
+        tables.pos_cash_closes![0].status = p.action;
+        return reply(id(120));
+      }
       if (name === 'create_pos_customer') {
         tables.customers.push({
           id: id(110),
@@ -337,6 +382,84 @@ test('POS timeout locks basket and retries the exact same sale key without a new
     page.getByText('Đã ghi bán và thu đủ tiền mặt. Chọn khách tiếp theo.', { exact: true }),
   ).toBeVisible();
   expect(calls.find((c) => c.name === 'post_pos_sale')!.body).toEqual(interrupted);
+});
+test('POS draft survives navigation and reload, then clears after successful checkout', async ({
+  page,
+}) => {
+  await mock(page);
+  await login(page);
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn hoặc tạo khách POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn khách Khách kiểm thử', exact: true }).click();
+  await page.getByRole('button', { name: 'Thêm 1 bì Bánh donut', exact: true }).click();
+  await page.getByLabel('Ghi chú POS', { exact: true }).fill('Giữ giỏ khi quay lại');
+  await page.getByRole('button', { name: 'Trang chính', exact: true }).click();
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await expect(page.getByLabel('Ghi chú POS', { exact: true })).toHaveValue('Giữ giỏ khi quay lại');
+  await expect(page.getByLabel('Số bì Bánh donut', { exact: true })).toHaveValue('1');
+  await page.reload();
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await expect(page.getByLabel('Ghi chú POS', { exact: true })).toHaveValue('Giữ giỏ khi quay lại');
+  await page.getByRole('button', { name: 'Chốt bán', exact: true }).click();
+  await expect(
+    page.getByText('Đã ghi bán và thu đủ tiền mặt. Chọn khách tiếp theo.', { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await expect(page.getByLabel('Số bì Bánh donut', { exact: true })).toHaveCount(0);
+});
+test('personal sales and cash close submits counted cash, then waits for manager', async ({
+  page,
+}) => {
+  const { calls } = await mock(page, 'staff');
+  await login(page, true);
+  await page.getByRole('tab', { name: 'Thêm', exact: true }).click();
+  await page.getByRole('button', { name: 'Bán hàng của tôi / Chốt tiền', exact: true }).click();
+  await expect(page.getByText('Ghi chú: Giao quầy trái', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Chốt tiền / bàn giao', exact: true }).click();
+  await page.getByLabel('Tiền thực đếm (đồng)', { exact: true }).fill('39000');
+  await page
+    .getByLabel('Ghi chú chênh lệch / bàn giao', { exact: true })
+    .fill('Thiếu 1.000 cần đối chiếu');
+  await page.getByRole('button', { name: 'Gửi phiếu chốt', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Đang chờ quản lý nhận tiền', exact: true }),
+  ).toBeDisabled();
+  expect(calls.find((c) => c.name === 'submit_pos_close')!.body.payload).toEqual({
+    expected_amount: 40000,
+    counted_amount: 39000,
+    note: 'Thiếu 1.000 cần đối chiếu',
+  });
+  await expect(page.getByRole('button', { name: 'Nhận tiền', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: 'test-output/screenshots/iphone-pos-close.png', fullPage: true });
+});
+test('manager receives a cash handover into a company account', async ({ page }) => {
+  const { tables, calls } = await mock(page);
+  tables.pos_cash_closes = [
+    {
+      id: id(120),
+      user_id: id(9),
+      business_date: day,
+      created_at: new Date().toISOString(),
+      expected_amount: 40000,
+      counted_amount: 39000,
+      note: 'Thiếu 1.000',
+      status: 'pending',
+    },
+  ];
+  await login(page);
+  await page.getByRole('tab', { name: 'Thêm', exact: true }).click();
+  await page.getByRole('button', { name: 'Bán hàng của tôi / Chốt tiền', exact: true }).click();
+  await page.getByRole('button', { name: 'Nhận tiền', exact: true }).click();
+  await page.getByRole('button', { name: /Quỹ nhận tiền/ }).click();
+  await page.getByRole('button', { name: 'Tiền mặt kiểm thử', exact: true }).click();
+  await page.getByRole('button', { name: 'Đã nhận đủ tiền', exact: true }).click();
+  await expect(page.getByText('Đã nhận tiền · Thiếu 1.000', { exact: true })).toBeVisible();
+  expect(calls.find((c) => c.name === 'review_pos_close')!.body.payload).toMatchObject({
+    close_id: id(120),
+    action: 'received',
+    destination_id: id(8),
+  });
 });
 test('phone-only login, owner provision and self password change', async ({ page }) => {
   const { calls } = await mock(page);

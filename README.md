@@ -14,7 +14,9 @@ POS đã kết nối dữ liệu thật: menu nhóm món/tìm kiếm, món thư�
 
 Khảo sát và triển khai ngày 14/10/2026. Supabase: `phuc-an-db`, region Singapore, PostgreSQL 17. Repository bắt đầu từ checkout trống; ứng dụng đọc/ghi DB thật qua Auth + RLS + RPC.
 
-Hai migrations đã áp dụng vào Supabase: mobile_operations_v1 và reporting_snapshots_v1. Danh mục, công thức và giá cũ được giữ nguyên; thêm đơn khách, CRM, mua/nhận nguyên liệu, ledger thu/chi và phân quyền nội bộ.
+Các migration bổ sung trong supabase/migrations đã áp dụng vào Supabase, gồm nghiệp vụ, phân quyền/tài khoản, POS và đối soát bàn giao tiền. Danh mục, công thức và giá nguồn được giữ lại để đối chiếu.
+
+POS tự lưu giỏ theo tài khoản. Mục Lịch sử / Chốt tiền hiển thị lần bán cá nhân, nhận tiền thực đếm và phiếu chờ quản lý xác nhận vào quỹ công ty. [Hướng dẫn chạy thử và phát hành iOS](docs/mobile/release.md) ghi rõ các bước ký TestFlight và nghiệm thu trên thiết bị thật còn lại.
 
 - [Báo cáo triển khai và kiểm thử](docs/database/implementation.md)
 - [Contract RPC cho mobile](docs/database/api-contract.md)

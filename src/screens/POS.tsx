@@ -15,6 +15,7 @@ import { useApp } from '../lib/context';
 import { errorMessage, money, quantity, shortId, today } from '../lib/format';
 import { favoriteProducts, posLineTotal, posPrice, searchText } from '../lib/pos';
 import { pendingMutation, submitMutation, type Pending } from '../lib/mutations';
+import { readPosDraft, savePosDraft } from '../lib/posDraft';
 
 export function POS() {
   const a = useApp();
@@ -33,6 +34,7 @@ export function POS() {
     [notice, setNotice] = useState(''),
     [pending, setPending] = useState<Pending | null>(null);
   const [orderId, setOrderId] = useState('');
+  const [draftReady, setDraftReady] = useState(false);
   const key = useRef(Crypto.randomUUID()),
     createKey = useRef(Crypto.randomUUID()),
     posting = useRef(false);
@@ -40,7 +42,7 @@ export function POS() {
     order = a.data.orders.find((o) => o.id === orderId);
   const products = a.data.products.filter((p) => p.is_active),
     units = new Map(a.data.units.map((u) => [u.product_id, u]));
-  const locked = saving || a.busy || !!pending;
+  const locked = !draftReady || saving || a.busy || !!pending;
   const routes = a.data.routes.filter(
     (r) =>
       r.is_active &&
@@ -51,28 +53,53 @@ export function POS() {
   const categories = [...new Set(products.map((p) => p.category).filter((c): c is string => !!c))];
   useEffect(() => {
     let live = true;
-    void pendingMutation(a.userId).then((p) => {
-      if (!live) return;
-      setPending(p);
-      if (p?.name === 'post_pos_sale') {
-        setCustomerId(String(p.payload.customer_id));
-        setOrderId(String(p.payload.order_id || ''));
-        setNote(String(p.payload.note || ''));
-        setPieces(
-          Object.fromEntries(
-            (p.payload.lines as { product_id: string; order_qty: number }[]).map((l) => [
-              l.product_id,
-              l.order_qty * 10,
-            ]),
-          ),
-        );
-        key.current = p.key;
-      }
-    });
+    void Promise.all([pendingMutation(a.userId), readPosDraft(a.userId)])
+      .then(([p, draft]) => {
+        if (!live) return;
+        if (draft && !p) {
+          setCustomerId(draft.customerId);
+          setOrderId(draft.orderId);
+          setPieces(draft.pieces);
+          setTyped(draft.typed);
+          setNote(draft.note);
+          key.current = draft.key;
+          setNotice('Đã khôi phục giỏ đang bán. Giá và quyền truy cập được kiểm tra lại.');
+        }
+        setPending(p);
+        if (p?.name === 'post_pos_sale') {
+          setCustomerId(String(p.payload.customer_id));
+          setOrderId(String(p.payload.order_id || ''));
+          setNote(String(p.payload.note || ''));
+          setPieces(
+            Object.fromEntries(
+              (p.payload.lines as { product_id: string; order_qty: number }[]).map((l) => [
+                l.product_id,
+                l.order_qty * 10,
+              ]),
+            ),
+          );
+          key.current = p.key;
+        }
+        setDraftReady(true);
+      })
+      .catch(() => {
+        if (live) {
+          setError('Không đọc được giỏ đã lưu. Hãy mở lại màn hình.');
+        }
+      });
     return () => {
       live = false;
     };
-  }, [a.userId, a.data]);
+  }, [a.userId]);
+  useEffect(() => {
+    if (!draftReady || pending || saving) return;
+    void savePosDraft(
+      a.userId,
+      customerId || note || Object.keys(pieces).length
+        ? { customerId, orderId, pieces, typed, note, key: key.current }
+        : null,
+    ).catch(() => setError('Không lưu được giỏ trên thiết bị. Giữ màn hình này cho đến khi chốt.'));
+  }, [a.userId, draftReady, customerId, orderId, pieces, typed, note, pending, saving]);
   function quote(id: string) {
     if (!customer) return null;
     if (order) {
@@ -124,9 +151,14 @@ export function POS() {
       !q || !Number.isFinite(v) || v < 0 || Math.abs(v * q.pack - Math.round(v * q.pack)) > 1e-7
     );
   });
+  const draftUnavailable =
+    (!!customerId && !customer) ||
+    Object.entries(pieces).some(([id, qty]) => qty > 0 && !products.some((p) => p.id === id)) ||
+    (!!orderId && (!order || !['confirmed', 'partial'].includes(order.status)));
   const valid =
     !!customer &&
     cart.length > 0 &&
+    !draftUnavailable &&
     !invalid &&
     cart.every((p) => {
       const q = quote(p.id);
@@ -246,7 +278,7 @@ export function POS() {
     }
   }
   async function checkout() {
-    if (posting.current || saving || a.busy || (!pending && !valid)) return;
+    if (!draftReady || posting.current || saving || a.busy || (!pending && !valid)) return;
     posting.current = true;
     setSaving(true);
     setError('');
@@ -316,6 +348,14 @@ export function POS() {
         <Text style={s.h2}>POS · Bán nhanh</Text>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Lịch sử / Chốt tiền"
+          disabled={locked}
+          onPress={() => a.go('my-sales')}
+        >
+          <Text style={s.muted}>Lịch sử / Chốt tiền →</Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Chọn hoặc tạo khách POS"
           disabled={locked}
           onPress={() => {
@@ -356,6 +396,27 @@ export function POS() {
             Yêu cầu trước chưa rõ kết quả. Thử lại giữ nguyên mã, không ghi trùng. Giỏ được khóa
             trong lúc chờ.
           </Text>
+        )}
+        {draftUnavailable && !pending && (
+          <View style={s.banner}>
+            <Text style={s.text}>
+              Khách, món hoặc đơn trong giỏ đã ngừng dùng hay không còn trong quyền của bạn. Tạo giỏ
+              mới để tiếp tục.
+            </Text>
+            <Button
+              title="Bỏ giỏ cũ, tạo giỏ mới"
+              disabled={locked}
+              secondary
+              onPress={() => {
+                setCustomerId('');
+                setOrderId('');
+                setPieces({});
+                setTyped({});
+                setNote('');
+                key.current = Crypto.randomUUID();
+              }}
+            />
+          </View>
         )}
         {!customer ? (
           <Empty

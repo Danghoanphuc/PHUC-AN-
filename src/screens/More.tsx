@@ -512,6 +512,7 @@ export function More() {
         </View>
         <Tag value={a.role} />
       </Card>
+      <Button title="Bán hàng của tôi / Chốt tiền" onPress={() => a.go('my-sales')} />
       {pending && (
         <Card>
           <Text style={s.h3}>Thao tác chờ xác nhận</Text>

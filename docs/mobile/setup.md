@@ -41,7 +41,11 @@ Tạo nhanh khách bằng create_pos_customer: tên, số liên hệ tùy chọn
 
 Nút Chốt bán ghi rõ xác nhận đã thu đủ tiền mặt. post_pos_sale chọn giá/đơn vị/snapshot ở server, xác nhận đơn và ghi delivery, receivable đã trả đủ, cash ledger trong một transaction. Wallet POS nội bộ tạo riêng theo Auth UUID người bán, cash account được quản lý xem trong sổ tiền hiện có. Không tự coi POS là chuyển khoản hoặc ghi nợ. Đơn đặt đã xác nhận dùng giá snapshot và version, có thể giao từng phần; không tạo trùng một đơn mới. Đơn nháp cần xác nhận theo luồng quản lý hiện hành.
 
-Phiên bản này chưa quản lý tồn thành phẩm trên xe/chuyến, bàn giao tiền cuối tuyến hoặc đồng bộ nhiều đơn offline. Timeout giữ nguyên payload/key, khóa giỏ và cho retry cùng yêu cầu. Chưa chạy UI bằng tài khoản thật của người dùng hoặc trên iPhone vật lý; kiểm thử UI dùng fixture cô lập và kiểm tra RPC thật dùng dữ liệu rollback.
+Giỏ nháp tự lưu riêng theo Auth UUID (SecureStore trên iOS, sessionStorage của tab web), gồm khách/đơn, số lượng, nội dung đang nhập, ghi chú và mã chống trùng. Chuyển màn hình/mở lại native app khôi phục giỏ, kiểm tra lại quyền/giá/trạng thái đơn. Xóa giỏ lưu trước khi báo chốt thành công. Web khôi phục khi reload cùng tab; đóng tab không bảo đảm giữ giỏ. Chưa đồng bộ giỏ giữa các thiết bị.
+
+POS → Lịch sử / Chốt tiền (hoặc Thêm → Bán hàng của tôi / Chốt tiền): xem 200 lần bán gần nhất của chính người đăng nhập, chi tiết món/ghi chú và số dư ví POS cộng dồn. Nhân viên nhập toàn bộ tiền thực đếm; nếu khác sổ cần ghi chú. Mỗi người chỉ có một phiếu chờ. Quản lý nhận đúng số tiền khai vào quỹ công ty bằng hai bút toán transfer cân bằng hoặc yêu cầu đếm lại. Phiếu giữ số dư tại lúc gửi; bán tiếp sau đó được cộng vào số dư mới. Phần thiếu/thừa vẫn tồn tại trên ví để xử lý, không tự ghi chi phí hoặc xóa chênh lệch. Mọi lần nhận/gửi retry đều idempotent. Trả hàng/hoàn tiền tiếp tục dùng luồng quản lý hiện có.
+
+Phiên bản này chưa quản lý tồn thành phẩm trên xe/chuyến hoặc đồng bộ nhiều đơn offline. Timeout giữ nguyên payload/key, khóa giỏ và cho retry cùng yêu cầu. Chưa chạy UI bằng tài khoản thật của người dùng hoặc trên iPhone vật lý; kiểm thử UI dùng fixture cô lập và kiểm tra RPC thật dùng dữ liệu rollback.
 
 Session native lưu bằng expo-secure-store, chia chunk dưới giới hạn mỗi giá trị; web dùng sessionStorage của tab. Danh mục/hồ sơ/tiền không được lưu offline, dữ liệu trong RAM được xóa khi đổi tài khoản hoặc logout. Không đưa secret/service_role vào mobile.
 
@@ -51,21 +55,21 @@ Mỗi RPC ghi có request_key. Trước gửi, lưu yêu cầu đang chạy theo
 
 `npm ci` → `npm start` → mở Expo Go trên iPhone cùng mạng và quét QR. Cấu hình app dùng scheme phucan, bundleIdentifier com.phucan.ops, icon/splash riêng. Trước phân phối chính thức cần xác nhận bundle identifier, đăng ký Apple Developer, EAS project và thiết bị/certificates phù hợp.
 
-`npm run build:ios` đã xuất bundle Hermes thành công. Đây là kiểm tra bundle JS/asset iOS trên Windows, không phải native Xcode build, IPA, TestFlight hoặc thử thiết bị thật. `eas.json` có preview simulator và production; thực hiện build ký cần Expo/Apple account hoặc môi trường macOS. Không bắt đầu dịch vụ build trả phí hoặc tự tạo chứng chỉ trong lượt này.
+`npm run build:ios` xuất bundle Hermes. Đây là kiểm tra JS/asset iOS trên Windows, không phải IPA/TestFlight. `eas.json` tách simulator, preview cho iPhone thật (ad hoc) và production cho TestFlight; xem [quy trình phát hành](release.md). Máy hiện chưa có phiên Expo hoặc EXPO_TOKEN, app chưa liên kết EAS project; cần chủ tài khoản đăng nhập để ký và phát hành.
 
 `npm run build:web` xuất dist; `node scripts/serve-preview.mjs` xem tại http://127.0.0.1:8081. Preview local không phải website đã publish.
 
 ## Kiểm chứng
 
 - TypeScript: `npm run typecheck` pass.
-- Backend: 40 kịch bản pass, gồm DB, phân quyền service-only, bootstrap một lần, kiểm tra JWT/owner của Edge Function và các invariant bán/mua/tiền.
-- UI: 5 kịch bản Playwright trên viewport 390×844 pass: đăng nhập số điện thoại, cấp/reset tài khoản, tự đổi mật khẩu, CRM, đơn bán/mua, phân quyền và retry giao dịch.
+- Backend: 47 kịch bản, gồm DB, phân quyền service-only, bootstrap một lần, JWT/owner, POS, bàn giao tiền/chênh lệch và idempotency.
+- UI: 10 kịch bản Playwright trên viewport 390×844: đăng nhập số điện thoại, cấp/reset tài khoản, CRM, đơn bán/mua, POS cố định footer, giỏ qua reload, chốt/nhận tiền và retry.
 - iOS bundle: export thành công; Expo Doctor 21/21 pass.
 - Auth/Data API thật: settings trả phone=false/email=true; anon bị chặn HTTP 401 ở customers/products/cash_movements/member_profiles.
 - Edge Function thật: yêu cầu cấp tài khoản không đăng nhập trả 401; bootstrap sai token trả 403. SQL smoke trên Supabase: 28 assertions pass và rollback toàn bộ fixture. Màn hình owner setup đã kiểm tra tại bản preview; token được xóa khỏi URL sau khi mở.
 - Snapshot ảnh ở test-output/screenshots chỉ chứa fixture kiểm thử, không phải hồ sơ hoặc giao dịch thật. Test không bypass Auth/RLS trong code app; mock chỉ được cài trong Playwright.
 
-Chưa thực hiện UI end-to-end bằng tài khoản người dùng thật vì owner chưa đặt mật khẩu lần đầu; chưa chạy trên iPhone vật lý/Simulator. Chưa stress-test nhiều connection, Apple distribution, SMS, push notification, máy in hay offline sync.
+Owner đã hoạt động. Chưa thực hiện UI end-to-end bằng mật khẩu người dùng thật hoặc trên iPhone vật lý/Simulator. Chưa stress-test nhiều connection, Apple distribution, SMS, push notification, máy in hay offline sync.
 
 `npm audit` ghi nhận 24 cảnh báo dependency transitive trong toolchain Expo/Metro/Xcode tại các phiên bản đang dùng. Có báo cáo local trong test-output/dependency-audit.json; không dùng audit fix --force để hạ Expo/RN xuống SDK cũ không tương thích. Tiếp tục theo dõi bản vá upstream; không expose Metro dev server ra internet hoặc đưa vào production hosting. App data/auth RLS được kiểm chứng riêng, không suy ra audit dependency đã sạch từ kết quả RLS.
 

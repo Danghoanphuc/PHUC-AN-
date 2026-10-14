@@ -96,6 +96,13 @@ public.create_pos_customer(payload,request_key) trả UUID customer. Payload `{n
 
 Manager được INSERT/UPDATE các danh mục được cấp policy, gán route_assignments, customers.assigned_to/address/payment_terms_days/credit_policy. Mọi tài chính/đơn/price history chỉ ghi qua RPC. product_units là quy cách đơn vị giá; sửa quy cách không sửa snapshot giá cũ. Khi thay quy cách, tạo giá mới phù hợp, không đổi giá cũ ngầm.
 
+## Đối soát POS
+
+- `pos_summary()` không nhận actor từ client: trả số dư cộng dồn wallet POS và tối đa 200 lần bán gần nhất có created_by=auth.uid(), gồm tên khách/món, số lượng, thành tiền, ghi chú. Không trả giá vốn, ví hoặc giao dịch người khác. Cần membership active.
+- `submit_pos_close(payload,request_key)`: `{expected_amount,counted_amount,note}`. Server tính lại số dư sau khóa wallet. expected_amount phải khớp; counted_amount nguyên không âm <1e12; khác sổ cần note. Một phiếu pending/actor. Không chuyển tiền ngay.
+- `review_pos_close(payload,request_key)`: manager/owner, `{close_id,action:'received'|'rejected',destination_id?,note?}`. Received yêu cầu quỹ cash công ty active, không phải wallet POS. Chuyển counted_amount bằng hai bút toán transfer cùng transfer_group=close_id, không cộng doanh thu. Rejected cần lý do, không phát sinh tiền. Chênh lệch được giữ trên wallet; không tự xóa/ghi chi phí. Retry giữ nguyên kết quả.
+- `pos_cash_closes`: authenticated chỉ SELECT, staff chỉ phiếu của mình, manager/owner thấy toàn bộ. Ghi qua RPC private definer được kiểm tra vai trò; wrappers public invoker. Phiếu received/rejected không sửa bằng API. Không có RPC đảo phiếu received trong phiên bản pilot.
+
 ## CRM và dữ liệu đọc
 
 customer_activities cho phép INSERT `{customer_id,kind:'call'|'visit'|'note',body,occurred_at?}`, created_by phải là auth.uid. customer_tasks cho phép INSERT việc cho bản thân (staff) hoặc thành viên khác (manager); staff chỉ sửa status của việc được giao trong phạm vi khách. Không cho sửa created_by.
