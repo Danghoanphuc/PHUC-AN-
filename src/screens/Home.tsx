@@ -85,14 +85,14 @@ export function Home() {
       </View>
       <View style={s.row}>
         <View style={{ flex: 1 }}>
-          <Button title="Tạo đơn khách" icon="add-outline" onPress={() => a.editOrder()} />
+          <Button title="Bán nhanh POS" icon="calculator-outline" onPress={() => a.go('pos')} />
         </View>
         <View style={{ flex: 1 }}>
           <Button
-            title="Chăm sóc khách"
+            title="Tạo đơn khách"
             secondary
             icon="people-outline"
-            onPress={() => a.go('customers')}
+            onPress={() => a.editOrder()}
           />
         </View>
       </View>

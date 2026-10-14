@@ -26,6 +26,7 @@ import { Customers, CustomerDetail } from './src/screens/Customers';
 import { Prices } from './src/screens/Prices';
 import { SaleDetail } from './src/screens/Sales';
 import { More } from './src/screens/More';
+import { POS } from './src/screens/POS';
 
 export default function App() {
   return (
@@ -54,6 +55,17 @@ function Workspace() {
     [purchaseEditor, setPurchaseEditor] = useState<{ order?: Row<'purchase_orders'> } | null>(null);
   const generation = useRef(0),
     actor = useRef<string | null>(null);
+  const initialNavigation = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session) {
+      initialNavigation.current = null;
+      return;
+    }
+    if (member && initialNavigation.current !== session.user.id) {
+      initialNavigation.current = session.user.id;
+      if (member.role === 'staff') setPage('pos');
+    }
+  }, [member, session?.user.id]);
   const clear = useCallback(() => {
     setData(emptyData);
     setMember(null);
@@ -198,6 +210,7 @@ function Workspace() {
     selected: React.ComponentProps<typeof Icon>['name'];
   }[] = [
     { id: 'home', label: 'Hôm nay', icon: 'home-outline', selected: 'home' },
+    { id: 'pos', label: 'POS', icon: 'calculator-outline', selected: 'calculator' },
     { id: 'orders', label: 'Đơn hàng', icon: 'receipt-outline', selected: 'receipt' },
     { id: 'customers', label: 'Khách hàng', icon: 'people-outline', selected: 'people' },
     { id: 'prices', label: 'Giá', icon: 'pricetag-outline', selected: 'pricetag' },
@@ -214,6 +227,8 @@ function Workspace() {
     ) : (
       <SaleDetail id={detail.id} />
     )
+  ) : page === 'pos' ? (
+    <POS />
   ) : page === 'home' ? (
     <Home />
   ) : page === 'orders' ? (
@@ -339,21 +354,25 @@ function Workspace() {
                     <Text style={s.text}>{toast}</Text>
                   </View>
                 )}
-                <ScrollView
-                  key={detail?.id ?? page}
-                  contentContainerStyle={{ flexGrow: 1 }}
-                  refreshControl={
-                    <RefreshControl
-                      refreshing={loading}
-                      onRefresh={() => void refresh()}
-                      tintColor={C.green}
-                    />
-                  }
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  {content}
-                </ScrollView>
+                {!detail && page === 'pos' ? (
+                  content
+                ) : (
+                  <ScrollView
+                    key={detail?.id ?? page}
+                    contentContainerStyle={{ flexGrow: 1 }}
+                    refreshControl={
+                      <RefreshControl
+                        refreshing={loading}
+                        onRefresh={() => void refresh()}
+                        tintColor={C.green}
+                      />
+                    }
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {content}
+                  </ScrollView>
+                )}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -362,6 +381,7 @@ function Workspace() {
                     backgroundColor: C.paper,
                     paddingTop: 10,
                     paddingBottom: 8,
+                    display: !detail && page === 'pos' ? 'none' : 'flex',
                   }}
                 >
                   {nav.map((n) => (

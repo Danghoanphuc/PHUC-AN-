@@ -86,6 +86,10 @@ reconcile_material_stock: `{material_id,counted_qty,reason}`. counted_qty theo b
 
 ## Giá, alias và thành viên
 
+POS: public.post_pos_sale(payload,request_key) trả UUID sale. Payload `{customer_id,expected_total,note?,lines:[{product_id,order_qty}],order_id?,version?}`; order_qty luôn là đơn vị bì đặt 10 cái. Chốt mặc định thu đủ tiền mặt vào wallet POS của actor, không nhận account_id/collected_amount/discount_pct do client gửi. expected_total phải khớp giá server hoặc snapshot đơn đã chốt; mismatch rollback cả giao dịch. Nhân viên chỉ thao tác trong customer scope; helper posting riêng không cấp execute cho authenticated/anon. Retry cùng actor/key/payload trả cùng sale.
+
+public.create_pos_customer(payload,request_key) trả UUID customer. Payload `{name,phone?,route_id}`. Route phải active; staff cần route_assignments đúng actor/tuyến. Gán assigned_to tại server, customer_type Bạn hàng, credit_policy limited/limit 0. Không nhận cấp hạn mức/chiết khấu/phân công từ client.
+
 - set_selling_price: `{product_id,customer_id?,price_tier:'retail'|'wholesale',amount,effective_from}`. Dùng product_units đã verified. Ngày mới phải sau giá cùng scope/tier mới nhất; đóng giá trước ngày hiệu lực mới. Giá đang snapshot trong đơn không đổi.
 - bind_order_alias: `{alias,scope,customer_id}`. Manager xác nhận scope khách, cập nhật review tương ứng.
 - manage_member: `{user_id,role:'owner'|'manager'|'staff',active:boolean}`. Chỉ owner. Auth user phải đã tồn tại; không tự tạo tài khoản/Auth email trong RPC, không cho owner tự hạ quyền/khóa mình.

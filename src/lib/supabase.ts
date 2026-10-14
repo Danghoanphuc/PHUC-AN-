@@ -26,19 +26,21 @@ export async function readRows<T extends Table>(name: T): Promise<Row<T>[]> {
       .from(name)
       .select('*')
       .order(
-        name === 'app_members' || name === 'member_profiles'
-          ? 'user_id'
-          : name === 'product_units'
-            ? 'product_id'
-            : name === 'material_stock_baselines'
-              ? 'material_id'
-              : name === 'order_product_name_rules'
-                ? 'alias'
-                : name === 'product_aliases'
-                  ? 'alias_sku'
-                  : name === 'sale_item_costs'
-                    ? 'sale_item_id'
-                    : 'id',
+        name === 'order_product_name_rules'
+          ? 'alias'
+          : name === 'route_assignments'
+            ? 'route_id'
+            : name === 'app_members' || name === 'member_profiles'
+              ? 'user_id'
+              : name === 'product_units'
+                ? 'product_id'
+                : name === 'material_stock_baselines'
+                  ? 'material_id'
+                  : name === 'product_aliases'
+                    ? 'alias_sku'
+                    : name === 'sale_item_costs'
+                      ? 'sale_item_id'
+                      : 'id',
       )
       .range(start, start + 499);
     if (error) throw error;

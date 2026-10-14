@@ -98,6 +98,8 @@ async function mock(page: Page, role = 'owner') {
     cash_movements: [],
     data_review_issues: [],
     v_material_stock: [],
+    order_product_name_rules: [],
+    route_assignments: [{ user_id: id(1), route_id: id(3) }],
   };
   const calls: { name: string; body: any }[] = [];
   const user = {
@@ -153,6 +155,34 @@ async function mock(page: Page, role = 'owner') {
     if (url.pathname.includes('/rpc/')) {
       calls.push({ name, body });
       const p = body?.payload;
+      if (name === 'create_pos_customer') {
+        tables.customers.push({
+          id: id(110),
+          code: 'TEST_NEW',
+          name: p.name,
+          phone: p.phone || null,
+          route_id: p.route_id,
+          customer_type: 'Bạn hàng',
+          is_active: true,
+          default_discount_pct: 0,
+          credit_policy: 'limited',
+          credit_limit: 0,
+          payment_terms_days: 0,
+        });
+        return reply(id(110));
+      }
+      if (name === 'post_pos_sale') {
+        tables.sales.push({
+          id: id(111),
+          customer_id: p.customer_id,
+          sale_date: day,
+          net_amount: p.expected_total,
+          collected_amount: p.expected_total,
+          note: p.note,
+          created_by: id(1),
+        });
+        return reply(id(111));
+      }
       if (name === 'list_member_invites') return reply([]);
       if (name === 'save_customer_order') {
         const orderId = id(20 + tables.customer_orders!.length);
@@ -236,13 +266,78 @@ async function mock(page: Page, role = 'owner') {
   });
   return { tables, calls };
 }
-async function login(page: Page) {
+async function login(page: Page, staff = false) {
   await page.goto('/');
   await page.getByLabel('Số điện thoại', { exact: true }).fill('0912345678');
   await page.getByLabel('Mật khẩu', { exact: true }).fill('TEST_PASSWORD_ONLY');
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  if (staff) await expect(page.getByText('POS · Bán nhanh', { exact: true })).toBeVisible();
+  if (staff) await page.getByRole('button', { name: 'Trang chính', exact: true }).click();
   await expect(page.getByText('Chào ngày mới.')).toBeVisible();
 }
+test('real POS keeps checkout pinned, creates customer and posts quantity/notes with full-cash intent', async ({
+  page,
+}) => {
+  const { calls } = await mock(page, 'staff');
+  await login(page, true);
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  const total = page.getByLabel('Tổng tiền và chốt POS');
+  await expect(total).toBeVisible();
+  const before = await total.boundingBox();
+  expect(before!.y + before!.height).toBeLessThanOrEqual(844);
+  await page.getByRole('button', { name: 'Chọn hoặc tạo khách POS', exact: true }).click();
+  await page.getByLabel('Tìm khách POS', { exact: true }).fill('Bạn hàng mới kiểm thử');
+  await page.getByRole('button', { name: 'Tạo khách & bán ngay', exact: true }).click();
+  await expect(page.getByText('Bạn hàng mới kiểm thử', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Thêm 1 bì Bánh donut', exact: true }).click();
+  await page.getByRole('button', { name: 'Tăng số bì Bánh donut', exact: true }).click();
+  await page.getByLabel('Số bì Bánh donut', { exact: true }).fill('3');
+  await page.getByLabel('Ghi chú POS', { exact: true }).fill('Giao quầy bên trái');
+  await page.screenshot({ path: 'test-output/screenshots/iphone-pos-populated.png' });
+  const footer = await total.boundingBox();
+  expect(Math.abs(footer!.y - before!.y)).toBeLessThan(2);
+  expect(footer!.y + footer!.height).toBeLessThanOrEqual(844);
+  await page.getByRole('button', { name: 'Chốt bán', exact: true }).click();
+  await expect(
+    page.getByText('Đã ghi bán và thu đủ tiền mặt. Chọn khách tiếp theo.', { exact: true }),
+  ).toBeVisible();
+  const body = calls.find((c) => c.name === 'post_pos_sale')!.body;
+  expect(body.payload).toMatchObject({
+    customer_id: id(110),
+    expected_total: 120000,
+    note: 'Giao quầy bên trái',
+    lines: [{ product_id: id(4), order_qty: 3 }],
+  });
+  expect(body.request_key).toMatch(/[0-9a-f-]{36}/);
+  expect(body.payload).not.toHaveProperty('account_id');
+  await page.screenshot({ path: 'test-output/screenshots/iphone-real-pos.png' });
+});
+test('POS timeout locks basket and retries the exact same sale key without a new transaction', async ({
+  page,
+}) => {
+  const { calls } = await mock(page);
+  await login(page);
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn hoặc tạo khách POS', exact: true }).click();
+  await page.getByRole('button', { name: 'Chọn khách Khách kiểm thử', exact: true }).click();
+  await page.getByRole('button', { name: 'Thêm 1 bì Bánh donut', exact: true }).click();
+  let interrupted: any;
+  await page.route(`${project}/rest/v1/rpc/post_pos_sale`, async (route) => {
+    interrupted = route.request().postDataJSON();
+    await route.abort('failed');
+  });
+  await page.getByRole('button', { name: 'Chốt bán', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Thử lại yêu cầu', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Thêm 1 bì Bánh donut', exact: true }),
+  ).toBeDisabled();
+  await page.unroute(`${project}/rest/v1/rpc/post_pos_sale`);
+  await page.getByRole('button', { name: 'Thử lại yêu cầu', exact: true }).click();
+  await expect(
+    page.getByText('Đã ghi bán và thu đủ tiền mặt. Chọn khách tiếp theo.', { exact: true }),
+  ).toBeVisible();
+  expect(calls.find((c) => c.name === 'post_pos_sale')!.body).toEqual(interrupted);
+});
 test('phone-only login, owner provision and self password change', async ({ page }) => {
   const { calls } = await mock(page);
   await page.goto('/');
@@ -357,7 +452,7 @@ test('purchase form sends explicit base conversion and staff has no purchase or 
   await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
   await page.unroute(`${project}/**`);
   await mock(page, 'staff');
-  await login(page);
+  await login(page, true);
   await page.getByRole('tab', { name: 'Đơn hàng', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Mua nguyên liệu', exact: true })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Thêm', exact: true }).click();

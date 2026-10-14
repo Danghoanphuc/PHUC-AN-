@@ -4,6 +4,8 @@
 
 Dự án bắt đầu bằng khảo sát DB hiện có, trước khi triển khai giao diện và thay đổi schema.
 
+POS đã kết nối dữ liệu thật: menu nhóm món/tìm kiếm, món thường lấy theo khách, tạo bạn hàng trong tuyến, giỏ với nút −/+ /xóa và ghi chú. Tổng tiền cùng nút chốt nằm ở đáy màn hình ngoài vùng cuộn. Chốt POS xác nhận thu đủ tiền mặt và ghi bán/thu/công nợ cùng một transaction; nhân viên có sổ tiền POS riêng, không được mở ledger công ty. Có thể mở đơn đã xác nhận để giao toàn bộ hoặc từng phần.
+
 - [Báo cáo khảo sát DB](docs/database/research.md)
 - [Từ điển dữ liệu](docs/database/data-dictionary.md)
 - [Snapshot metadata](docs/database/schema-snapshot.json)

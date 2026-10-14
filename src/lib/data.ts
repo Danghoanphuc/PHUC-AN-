@@ -1,5 +1,7 @@
 import { readRows, supabase, type Role, type Row } from './supabase';
 export interface Data {
+  aliases: Row<'order_product_name_rules'>[];
+  assignments: Row<'route_assignments'>[];
   products: Row<'products'>[];
   units: Row<'product_units'>[];
   customers: Row<'customers'>[];
@@ -33,6 +35,8 @@ export interface Data {
   }[];
 }
 export const emptyData: Data = {
+  aliases: [],
+  assignments: [],
   products: [],
   units: [],
   customers: [],
@@ -147,5 +151,9 @@ export async function loadData(role: Role): Promise<Data> {
   }
   if (role === 'owner') result.members = await readRows('app_members');
   result.profiles = await readRows('member_profiles');
+  [result.aliases, result.assignments] = await Promise.all([
+    readRows('order_product_name_rules'),
+    readRows('route_assignments'),
+  ]);
   return result;
 }

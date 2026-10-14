@@ -2,7 +2,7 @@ import React, { createContext, useContext } from 'react';
 import type { Data } from './data';
 import type { Role, Row } from './supabase';
 import type { FormSpec } from '../components/ui';
-export type Page = 'home' | 'orders' | 'customers' | 'prices' | 'more';
+export type Page = 'home' | 'pos' | 'orders' | 'customers' | 'prices' | 'more';
 export type Detail = { kind: 'order' | 'purchase' | 'customer' | 'sale'; id: string };
 export interface AppContextValue {
   data: Data;

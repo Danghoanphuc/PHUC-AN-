@@ -31,6 +31,18 @@ Advisor vẫn báo Leaked Password Protection Disabled; đây là cấu hình Au
 
 ## Session và retry giao dịch
 
+### POS đang triển khai
+
+Staff vào POS sau đăng nhập; chủ/quản lý vào bằng tab POS hoặc Bán nhanh POS ở Hôm nay. Trang chính trong POS quay về các công cụ khác. Thanh tổng tiền và chốt là phần tử cố định của bố cục, nằm ngoài ScrollView và trên safe area iOS; không bị cuộn theo menu/giỏ. Không cần thanh toán qua nhiều màn hình.
+
+Danh mục/nhóm lấy từ products.category thật; không chép món hoặc giá minh họa của bản thiết kế vào DB. Thiếu giá/quy cách thì nút món bị khóa. Món hay lấy xếp theo số lượng trong lịch sử đơn khách; chưa có lịch sử thì hiện nhãn gợi ý món có giá. Alias tìm kiếm có scope khách. Giá riêng ưu tiên theo customer_id rồi bảng giá của loại khách, tính tiền decimal theo quy đổi và chiết khấu đã cấu hình; không có nút sửa giá, giảm giá hoặc bán chịu trong POS.
+
+Tạo nhanh khách bằng create_pos_customer: tên, số liên hệ tùy chọn, tuyến đang hoạt động. Staff chỉ chọn tuyến đã giao qua route_assignments; tạo assigned_to là chính người thao tác, hạn mức nợ mặc định 0. Manager/owner có thể quản lý hồ sơ sau đó. Tài khoản nhân viên cần được phân công tuyến trước khi thêm bạn hàng trong tuyến.
+
+Nút Chốt bán ghi rõ xác nhận đã thu đủ tiền mặt. post_pos_sale chọn giá/đơn vị/snapshot ở server, xác nhận đơn và ghi delivery, receivable đã trả đủ, cash ledger trong một transaction. Wallet POS nội bộ tạo riêng theo Auth UUID người bán, cash account được quản lý xem trong sổ tiền hiện có. Không tự coi POS là chuyển khoản hoặc ghi nợ. Đơn đặt đã xác nhận dùng giá snapshot và version, có thể giao từng phần; không tạo trùng một đơn mới. Đơn nháp cần xác nhận theo luồng quản lý hiện hành.
+
+Phiên bản này chưa quản lý tồn thành phẩm trên xe/chuyến, bàn giao tiền cuối tuyến hoặc đồng bộ nhiều đơn offline. Timeout giữ nguyên payload/key, khóa giỏ và cho retry cùng yêu cầu. Chưa chạy UI bằng tài khoản thật của người dùng hoặc trên iPhone vật lý; kiểm thử UI dùng fixture cô lập và kiểm tra RPC thật dùng dữ liệu rollback.
+
 Session native lưu bằng expo-secure-store, chia chunk dưới giới hạn mỗi giá trị; web dùng sessionStorage của tab. Danh mục/hồ sơ/tiền không được lưu offline, dữ liệu trong RAM được xóa khi đổi tài khoản hoặc logout. Không đưa secret/service_role vào mobile.
 
 Mỗi RPC ghi có request_key. Trước gửi, lưu yêu cầu đang chạy theo actor trong storage bảo vệ; nếu kết nối không xác định kết quả, giữ nguyên payload/key. Mục Thêm hiển thị thao tác chờ và cho retry đúng yêu cầu. Các lỗi SQL/PostgREST đã từ chối giao dịch được gỡ khỏi hàng chờ. Không phát triển đồng bộ offline đầy đủ trong bản này. Ghi CRM/danh mục đơn bảng hiện dùng Data API/RLS và chưa có retry queue tương đương RPC tài chính.

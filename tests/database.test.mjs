@@ -13,6 +13,37 @@ before(async()=>{
  await db.exec(memberSeed);
 });
 after(async()=>{await db?.close();});
+scenario('staff POS posts full paid sale, own wallet and note atomically and idempotently',async()=>{
+ await as('staff');const p={customer_id:ids.customer,expected_total:75000,note:'POS test note',lines:[{product_id:ids.donut,order_qty:1},{product_id:ids.kem,order_qty:1}]};
+ const id=await rpc('post_pos_sale',p,'pos-fixed-key');assert.equal(await rpc('post_pos_sale',p,'pos-fixed-key'),id);
+ await admin();const s=(await q('select * from public.sales where id=$1',[id]))[0];assert.equal(Number(s.net_amount),75000);assert.equal(Number(s.collected_amount),75000);assert.equal(s.note,'POS test note');
+ assert.equal((await q('select count(*) n from public.sales'))[0].n,1);const cash=(await q('select * from public.cash_movements where sale_id=$1',[id]))[0];assert.equal(Number(cash.amount),75000);assert.equal(cash.created_by,ids.staff);
+ assert.equal((await q('select status from public.customer_orders where id=$1',[s.customer_order_id]))[0].status,'completed');
+});
+scenario('POS cannot override price/credit, escape scope or call the internal posting bridge',async()=>{
+ await as('staff');const p={customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]};
+ await fails(()=>rpc('post_pos_sale',{...p,customer_id:ids.otherCustomer}),/outside assigned scope/);
+ for(const extra of [{discount_pct:50},{collected_amount:0},{account_id:ids.account}])await fails(()=>rpc('post_pos_sale',{...p,...extra}),/server controlled/);
+ await fails(()=>q("select private.post_delivery_as('{}','evil-pos-key',true)"),/permission denied/);
+ await fails(()=>rpc('post_pos_sale',{...p,expected_total:1}),/total changed/);
+ await admin();assert.equal((await q('select count(*) n from public.customer_orders'))[0].n,0);assert.equal((await q('select count(*) n from private.pos_wallets'))[0].n,0);
+});
+scenario('POS is denied to anonymous, nonmember and inactive operators',async()=>{
+ const p={customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]};
+ await as('outsider');await fails(()=>rpc('post_pos_sale',p),/Not authorized/);
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.staff]);await as('staff');await fails(()=>rpc('post_pos_sale',p),/Not authorized/);
+ await admin();await db.exec('set role anon');await fails(()=>rpc('post_pos_sale',p),/permission denied/);
+});
+scenario('POS customer creation is route scoped, defaults to no credit, and is retry safe',async()=>{
+ await as('staff');const p={name:'New POS partner',route_id:ids.route};const id=await rpc('create_pos_customer',p,'new-pos-customer-key');assert.equal(await rpc('create_pos_customer',p,'new-pos-customer-key'),id);
+ const c=(await q('select * from public.customers where id=$1',[id]))[0];assert.equal(c.assigned_to,ids.staff);assert.equal(c.customer_type,'Bạn hàng');assert.equal(Number(c.credit_limit),0);
+ await fails(()=>rpc('create_pos_customer',{...p,route_id:ids.otherRoute}),/outside assigned scope/);await fails(()=>rpc('create_pos_customer',{...p,credit_limit:1000}),/Restricted customer fields/);
+});
+scenario('staff POS delivers an existing confirmed order with version checks and no overdelivery',async()=>{
+ const o=await order();await as('staff');const p={customer_id:ids.customer,order_id:o.id,version:2,expected_total:20000,lines:[{product_id:ids.donut,order_qty:.5}]};await rpc('post_pos_sale',p);
+ await fails(()=>rpc('post_pos_sale',p),/Version conflict/);await fails(()=>rpc('post_pos_sale',{...p,version:3,lines:[{product_id:ids.donut,order_qty:2}]}),/exceeds remaining/);
+ await rpc('post_pos_sale',{...p,version:3});
+});
 const q=async(sql,params=[]) => (await db.query(sql,params)).rows;
 async function as(who) {await db.exec('reset role');await q(`select set_config('request.jwt.claim.sub',$1,false)`,[ids[who]??'']);await db.exec('set role authenticated');}
 async function admin() {await db.exec('reset role');}
