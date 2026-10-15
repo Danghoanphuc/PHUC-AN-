@@ -4,9 +4,11 @@ Bản web: **https://phuc-an.pages.dev** · [Cách cập nhật Cloudflare Pages
 
 Ứng dụng Expo React Native dành cho chủ, quản lý và nhân viên Phúc An. Ưu tiên iOS; giao diện tiếng Việt cho bán hàng, CRM, hồ sơ khách, giá, mua nguyên liệu, tồn kho và công nợ.
 
+Mục Kho trên thanh điều hướng hiển thị sản phẩm đang bán, giá sỉ/giá lẻ chung còn hiệu lực và đơn vị giá. Hỗ trợ tìm tên/mã/nhóm không dấu, lọc nhóm và mở Bảng giá chi tiết. Kho nguyên liệu vẫn nằm trong Thêm cho chủ/quản lý.
+
 Dự án bắt đầu bằng khảo sát DB hiện có, trước khi triển khai giao diện và thay đổi schema.
 
-POS đã kết nối dữ liệu thật: menu nhóm món/tìm kiếm, món thường lấy theo khách, tạo bạn hàng trong tuyến, giỏ với nút −/+ /xóa và ghi chú. Tổng tiền cùng nút chốt nằm ở đáy màn hình ngoài vùng cuộn. Chốt POS xác nhận thu đủ tiền mặt và ghi bán/thu/công nợ cùng một transaction; nhân viên có sổ tiền POS riêng, không được mở ledger công ty. Có thể mở đơn đã xác nhận để giao toàn bộ hoặc từng phần.
+POS mặc định bán theo số lượng: chọn/tạo khách → nhập số bì/hộp → báo giá theo khách → chốt và thu đủ tiền mặt ngay. Chi tiết loại bánh điền sau trong mục Chờ điền loại bánh hoặc Lịch sử bán hàng; không thu tiền lần nữa. Chủ/quản lý thiết lập giá và quy cách bì/hộp riêng cho từng khách ngay tại POS hoặc Bảng giá. [Luồng số lượng trước, loại bánh sau](docs/product/pos-quantity-first.md). Chế độ Chọn theo món vẫn hỗ trợ menu icon gọn, giỏ mỏng, báo tổng bì và giao đơn đã đặt.
 
 - [Báo cáo khảo sát DB](docs/database/research.md)
 - [Từ điển dữ liệu](docs/database/data-dictionary.md)

@@ -325,18 +325,20 @@ export function Select({
   options,
   onChange,
   disabled = false,
+  compact = false,
 }: {
   label: string;
   value: string;
   options: Option[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   const [show, setShow] = useState(false),
     [search, setSearch] = useState('');
   return (
     <View style={{ gap: 7 }}>
-      <Text style={s.muted}>{label}</Text>
+      {!compact && <Text style={s.muted}>{label}</Text>}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -345,7 +347,7 @@ export function Select({
           setSearch('');
           setShow(true);
         }}
-        style={[s.input, s.between]}
+        style={[s.input, s.between, compact && { minHeight: 36, paddingVertical: 6 }]}
       >
         <Text style={[s.text, { flex: 1 }]}>
           {options.find((o) => o.value === value)?.label ?? 'Chọn…'}

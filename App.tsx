@@ -28,6 +28,7 @@ import { SaleDetail } from './src/screens/Sales';
 import { More } from './src/screens/More';
 import { POS } from './src/screens/POS';
 import { MySales } from './src/screens/MySales';
+import { Inventory } from './src/screens/Inventory';
 
 export default function App() {
   return (
@@ -214,7 +215,7 @@ function Workspace() {
     { id: 'pos', label: 'POS', icon: 'calculator-outline', selected: 'calculator' },
     { id: 'orders', label: 'Đơn hàng', icon: 'receipt-outline', selected: 'receipt' },
     { id: 'customers', label: 'Khách hàng', icon: 'people-outline', selected: 'people' },
-    { id: 'prices', label: 'Giá', icon: 'pricetag-outline', selected: 'pricetag' },
+    { id: 'inventory', label: 'Kho', icon: 'cube-outline', selected: 'cube' },
     { id: 'more', label: 'Thêm', icon: 'grid-outline', selected: 'grid' },
   ];
   const role = member?.role as Role | undefined;
@@ -240,6 +241,8 @@ function Workspace() {
     <Customers />
   ) : page === 'prices' ? (
     <Prices />
+  ) : page === 'inventory' ? (
+    <Inventory />
   ) : (
     <More />
   );
@@ -249,7 +252,7 @@ function Workspace() {
         style={{
           flex: 1,
           backgroundColor: C.bg,
-          maxWidth: 580,
+          maxWidth: member && page === 'pos' && !detail ? 1440 : 580,
           width: '100%',
           alignSelf: 'center',
         }}

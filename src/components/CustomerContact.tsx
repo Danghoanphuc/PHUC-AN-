@@ -1,17 +1,28 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Button, s } from './ui';
 import { useApp } from '../lib/context';
 import { submitMutation } from '../lib/mutations';
+import { d } from './OrderDetailLayout';
 import type { Row } from '../lib/supabase';
 
-export function CustomerContact({ customer }: { customer: Row<'customers'> | undefined }) {
+export function CustomerContact({
+  customer,
+  compact = false,
+}: {
+  customer: Row<'customers'> | undefined;
+  compact?: boolean;
+}) {
   const a = useApp();
   if (!customer || customer.customer_type !== 'Khách lẻ') return null;
+  const ContactButton = compact ? Pressable : Button;
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={s.muted}>{customer.phone || 'Chưa có số điện thoại'}</Text>
-      <Button
+    <View style={compact ? { flexDirection: 'row', alignItems: 'center', gap: 8 } : { gap: 8 }}>
+      <Text style={compact ? d.meta : s.muted}>{customer.phone || 'Chưa có số điện thoại'}</Text>
+      <ContactButton
+        accessibilityRole="button"
+        accessibilityLabel="Cập nhật thông tin khách"
+        style={compact ? d.link : undefined}
         title="Cập nhật thông tin khách"
         secondary
         disabled={a.busy || !customer.is_active}
@@ -41,7 +52,9 @@ export function CustomerContact({ customer }: { customer: Row<'customers'> | und
             },
           })
         }
-      />
+      >
+        {compact ? <Text style={d.linkText}>Sửa thông tin</Text> : undefined}
+      </ContactButton>
     </View>
   );
 }

@@ -1428,6 +1428,171 @@ export type Database = {
           },
         ]
       }
+      pos_package_allocations: {
+        Row: {
+          id: string
+          line_id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          id?: string
+          line_id: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          id?: string
+          line_id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_package_allocations_line_id_fkey"
+            columns: ["line_id"]
+            isOneToOne: false
+            referencedRelation: "pos_package_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_package_allocations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_package_lines: {
+        Row: {
+          id: string
+          package_unit: string
+          pieces_per_package: number
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          package_unit: string
+          pieces_per_package: number
+          quantity: number
+          sale_id: string
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          package_unit?: string
+          pieces_per_package?: number
+          quantity?: number
+          sale_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_package_lines_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_package_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_package_prices: {
+        Row: {
+          amount: number
+          customer_id: string | null
+          id: string
+          package_unit: string
+          pieces_per_package: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          amount: number
+          customer_id?: string | null
+          id?: string
+          package_unit: string
+          pieces_per_package: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          amount?: number
+          customer_id?: string | null
+          id?: string
+          package_unit?: string
+          pieces_per_package?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_package_prices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_package_sales: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          id: string
+          status: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          id: string
+          status?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          id?: string
+          status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_package_sales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_members"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pos_package_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_package_sales_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_package_sales_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "v_sale_item_margin"
+            referencedColumns: ["sale_id"]
+          },
+        ]
+      }
       product_aliases: {
         Row: {
           alias_sku: string
@@ -2629,6 +2794,10 @@ export type Database = {
       }
     }
     Functions: {
+      allocate_pos_packages: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
       bind_order_alias: {
         Args: { payload: Json; request_key: string }
         Returns: string
@@ -2661,6 +2830,10 @@ export type Database = {
       }
       pos_summary: { Args: never; Returns: Json }
       post_delivery: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
+      post_pos_package_sale: {
         Args: { payload: Json; request_key: string }
         Returns: string
       }
@@ -2698,6 +2871,10 @@ export type Database = {
         Returns: string
       }
       save_purchase_order: {
+        Args: { payload: Json; request_key: string }
+        Returns: string
+      }
+      set_pos_package_price: {
         Args: { payload: Json; request_key: string }
         Returns: string
       }

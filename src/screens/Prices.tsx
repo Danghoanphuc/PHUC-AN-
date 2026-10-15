@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Card, Icon, Search, Segment, Select, s } from '../components/ui';
+import { Button, Card, Icon, Search, Segment, Select, s } from '../components/ui';
 import { useApp, managerRole } from '../lib/context';
 import { decimal, money, today, validDate } from '../lib/format';
 import { submitMutation } from '../lib/mutations';
+import {
+  editPackagePrice,
+  packageLabel,
+  packagePrice,
+  type PackageUnit,
+} from '../lib/packagePrices';
 export function Prices() {
   const a = useApp(),
     [search, setSearch] = useState(''),
@@ -79,6 +85,45 @@ export function Prices() {
           ...a.data.customers.map((c) => ({ value: c.id, label: c.name })),
         ]}
       />
+      {
+        <Card>
+          <Text style={s.h2}>{customer ? 'Giá bì / hộp của khách' : 'Giá bì / hộp chung'}</Text>
+          <Text style={s.muted}>
+            {customer
+              ? 'Ưu tiên giá riêng; chưa thiết lập thì dùng giá chung.'
+              : 'Áp dụng cho khách chưa có giá riêng. Đơn vị chuẩn: 10 cái.'}
+          </Text>
+          {!managerRole(a.role) && (
+            <Text style={s.muted}>
+              Tài khoản nhân viên chỉ được xem. Chủ hoặc quản lý có quyền sửa giá.
+            </Text>
+          )}
+          {(['bi', 'hop'] as PackageUnit[]).map((unit) => {
+            const rate = packagePrice(a.data, customer, unit);
+            return (
+              <View key={unit} style={s.between}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.h3}>
+                    {rate ? money(rate.amount) : 'Chưa thiết lập'} / {packageLabel(unit)}
+                  </Text>
+                  {rate && (
+                    <Text style={s.muted}>
+                      {rate.pieces_per_package} cái / {packageLabel(unit)}
+                    </Text>
+                  )}
+                </View>
+                {managerRole(a.role) && (
+                  <Button
+                    title={`Sửa giá ${packageLabel(unit)}`}
+                    secondary
+                    onPress={() => editPackagePrice(a, customer, unit)}
+                  />
+                )}
+              </View>
+            );
+          })}
+        </Card>
+      }
       <Search value={search} onChange={setSearch} placeholder="Tìm sản phẩm, mã SKU…" />
       {a.data.products
         .filter(

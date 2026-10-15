@@ -1,11 +1,15 @@
-import React from 'react';
-import { Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { Button, Card, Empty, Tag, s } from '../components/ui';
 import { useApp, managerRole } from '../lib/context';
 import { dateLabel, decimal, money, quantity, shortId, today } from '../lib/format';
 import { submitMutation } from '../lib/mutations';
 import { CustomerContact } from '../components/CustomerContact';
+import { PackageAllocation } from '../components/PackageAllocation';
+import { d, DetailDisclosure } from '../components/OrderDetailLayout';
+import { packageLabel } from '../lib/packagePrices';
 export function SaleDetail({ id }: { id: string }) {
+  const [allocation, setAllocation] = useState(false);
   const a = useApp(),
     sale = a.data.sales.find((s) => s.id === id);
   if (!sale) return <Empty title="Không tìm thấy chứng từ bán" />;
@@ -75,54 +79,99 @@ export function SaleDetail({ id }: { id: string }) {
       },
     });
   }
+  const packageSale = a.data.packageSales.find((p) => p.id === id);
+  const debt = (receivable?.amount ?? 0) - (receivable?.paid_amount ?? 0);
   return (
-    <View style={s.page}>
-      <View style={s.between}>
-        <Text style={s.label}>LẦN GIAO #{shortId(id)}</Text>
-        <Tag value={sale.payment_status} />
+    <View style={d.page}>
+      <View style={d.header}>
+        <View style={s.between}>
+          <Text style={d.title}>{customer?.name}</Text>
+          <Tag value={sale.payment_status} />
+        </View>
+        <Text style={d.meta}>
+          #{shortId(id)} · {dateLabel(sale.sale_date)}
+        </Text>
+        <CustomerContact customer={customer} compact />
+        {!!sale.note && <Text style={d.meta}>Ghi chú: {sale.note}</Text>}
       </View>
-      <Text style={s.title}>{customer?.name}</Text>
-      <CustomerContact customer={customer} />
-      <Text style={s.muted}>Ngày bán {dateLabel(sale.sale_date)}</Text>
-      <Card>
+      <View style={d.summary}>
         <View style={s.between}>
-          <Text style={s.text}>Giá trị bán hiện tại</Text>
-          <Text style={s.h2}>{money(sale.net_amount)}</Text>
+          <Text style={d.name}>Tổng tiền</Text>
+          <Text style={d.total}>{money(sale.net_amount)}</Text>
         </View>
         <View style={s.between}>
-          <Text style={s.text}>Thực thu net</Text>
-          <Text style={s.h3}>{money(sale.collected_amount)}</Text>
+          <Text style={d.meta}>Đã thu {money(sale.collected_amount)}</Text>
+          <Text style={d.meta}>{debt > 0 ? 'Còn nợ ' + money(debt) : 'Đã thu đủ'}</Text>
         </View>
-        <View style={s.divider} />
-        <View style={s.between}>
-          <Text style={s.h3}>Còn phải thu</Text>
-          <Text style={s.h2}>
-            {money((receivable?.amount ?? 0) - (receivable?.paid_amount ?? 0))}
-          </Text>
-        </View>
-      </Card>
-      {manager && receivable && receivable.amount > receivable.paid_amount && (
+      </View>
+      {manager && debt > 0 && (
         <Button title="Thu công nợ" icon="wallet-outline" onPress={collect} />
       )}
-      <Text style={s.h2}>Dòng hàng đã ghi</Text>
-      {items.map((i) => (
-        <Card key={i.id}>
-          <Text style={s.h3}>{a.data.products.find((p) => p.id === i.product_id)?.name}</Text>
-          <Text style={s.muted}>
-            Còn bán {quantity(i.qty * (i.pieces_per_price_unit_snapshot ?? 1))} cái · đã trả{' '}
-            {quantity(i.qty_returned * (i.pieces_per_price_unit_snapshot ?? 1))} cái
-          </Text>
-          <Text style={s.text}>
-            {money(i.unit_price)} / {i.price_unit_snapshot} · giảm {quantity(i.discount_pct)}%
-          </Text>
-          {manager && i.qty > 0 && (
-            <Button title="Ghi trả dòng này" secondary onPress={() => returnItem(i.id)} />
-          )}
-        </Card>
-      ))}
-      {manager && (
+      {packageSale && (
+        <View style={{ gap: 8 }}>
+          <View style={d.group}>
+            {a.data.packageLines
+              .filter((l) => l.sale_id === id)
+              .map((l, index) => (
+                <View key={l.id} style={[d.row, index > 0 && d.divided]}>
+                  <Text style={d.name}>
+                    {quantity(l.quantity)} {packageLabel(l.package_unit)}
+                  </Text>
+                  <Text style={d.amount}>{money(l.quantity * l.unit_price)}</Text>
+                </View>
+              ))}
+          </View>
+          <Button
+            title={packageSale.status === 'complete' ? 'Xem loại bánh đã điền' : 'Điền loại bánh'}
+            secondary={packageSale.status === 'complete'}
+            onPress={() => setAllocation(true)}
+          />
+        </View>
+      )}
+      {items.length > 0 && (
         <>
-          <Text style={s.h2}>Giao dịch tiền</Text>
+          <Text style={d.section}>Loại bánh · {items.length} món</Text>
+          <View style={d.group}>
+            {items.map((i, index) => (
+              <View key={i.id} style={[d.row, index > 0 && d.divided]}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={d.name}>
+                    {a.data.products.find((p) => p.id === i.product_id)?.name}
+                  </Text>
+                  <Text style={d.meta}>
+                    {quantity(i.qty * (i.pieces_per_price_unit_snapshot ?? 1))} cái
+                    {i.qty_returned > 0
+                      ? ' · đã trả ' +
+                        quantity(i.qty_returned * (i.pieces_per_price_unit_snapshot ?? 1)) +
+                        ' cái'
+                      : ''}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  {!packageSale && (
+                    <Text style={d.amount}>
+                    {money(i.line_amount)}
+                    </Text>
+                  )}
+                  {manager && i.qty > 0 && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Ghi trả dòng này"
+                      style={d.link}
+                      onPress={() => returnItem(i.id)}
+                    >
+                      <Text style={d.linkText}>Trả hàng</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+      {allocation && <PackageAllocation saleId={id} onClose={() => setAllocation(false)} />}
+      {manager && (
+        <DetailDisclosure title="Giao dịch tiền">
           {a.data.cash
             .filter((m) => m.sale_id === id)
             .map((m) => (
@@ -161,7 +210,7 @@ export function SaleDetail({ id }: { id: string }) {
                   )}
               </Card>
             ))}
-        </>
+        </DetailDisclosure>
       )}
     </View>
   );

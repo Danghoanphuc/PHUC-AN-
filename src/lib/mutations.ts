@@ -1,6 +1,7 @@
 import { mutate, supabase, type Rpc } from './supabase';
 import { sessionStorageAdapter } from './storage';
 import { savePosDraft } from './posDraft';
+import { savePackageDraft } from './packageDraft';
 export type Pending = { actor: string; name: Rpc; payload: Record<string, unknown>; key: string };
 const storageKey = (actor: string) => `phucan.pending.${actor}`;
 export async function pendingMutation(actor: string): Promise<Pending | null> {
@@ -22,6 +23,7 @@ export async function submitMutation(name: Rpc, payload: Record<string, unknown>
     const result = await mutate(name, payload, key);
     // Also covers a POS retry completed from More after restarting the app.
     if (name === 'post_pos_sale') await savePosDraft(actor, null);
+    if (name === 'post_pos_package_sale') await savePackageDraft(actor, null);
     await sessionStorageAdapter.removeItem(storageKey(actor));
     return result;
   } catch (e) {

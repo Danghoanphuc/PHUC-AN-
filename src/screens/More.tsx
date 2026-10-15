@@ -513,6 +513,13 @@ export function More() {
         <Tag value={a.role} />
       </Card>
       <Button title="Bán hàng của tôi / Chốt tiền" onPress={() => a.go('my-sales')} />
+      <Button
+        title="Kho sản phẩm & giá bán"
+        secondary
+        icon="cube-outline"
+        onPress={() => a.go('inventory')}
+      />
+      <Button title="Bảng giá" secondary icon="pricetag-outline" onPress={() => a.go('prices')} />
       {pending && (
         <Card>
           <Text style={s.h3}>Thao tác chờ xác nhận</Text>

@@ -4,6 +4,8 @@ import { Button, Card, Empty, Icon, Search, Tag, s } from '../components/ui';
 import { useApp, managerRole } from '../lib/context';
 import { money, quantity, shortId, today, validDate } from '../lib/format';
 import { supabase } from '../lib/supabase';
+import { CustomerPackagePrices } from '../components/CustomerPackagePrices';
+import { defaultCustomerRoute } from '../lib/customerRoute';
 export function Customers() {
   const a = useApp(),
     [search, setSearch] = useState('');
@@ -26,7 +28,10 @@ export function Customers() {
         {
           name: 'route',
           label: 'Tuyến',
-          options: a.data.routes.map((r) => ({ value: r.id, label: r.name })),
+          value: defaultCustomerRoute(a.data.routes),
+          options: a.data.routes
+            .filter((r) => r.is_active)
+            .map((r) => ({ value: r.id, label: r.name })),
         },
       ],
       submit: async (v) => {
@@ -35,7 +40,7 @@ export function Customers() {
           phone: v.phone || null,
           address: v.address || null,
           customer_type: v.type,
-          route_id: v.route || null,
+          route_id: v.route || defaultCustomerRoute(a.data.routes) || null,
         });
         if (error) throw error;
       },
@@ -223,6 +228,7 @@ export function CustomerDetail({ id }: { id: string }) {
         {c.customer_type ?? 'Chưa phân loại'} ·{' '}
         {a.data.routes.find((r) => r.id === c.route_id)?.name ?? 'Chưa có tuyến'}
       </Text>
+      <CustomerPackagePrices customerId={id} />
       <Card>
         <Text style={s.text}>{c.phone ?? 'Chưa cập nhật điện thoại'}</Text>
         <Text style={s.muted}>{c.address || 'Chưa cập nhật địa chỉ'}</Text>

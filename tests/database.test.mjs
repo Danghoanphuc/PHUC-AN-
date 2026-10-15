@@ -7,6 +7,88 @@ import { applyTestMigrations } from './migrations.mjs';
 
 import {ids,catalogueSeed,memberSeed} from './fixtures.mjs';
 let db;
+scenario('new POS customers default to Kon Dong while enforcing route assignments',async()=>{
+ await admin();await q("update public.routes set code='R-CHO_HUYEN',name='Kon Dơng' where id=$1",[ids.route]);
+ await as('staff');
+ const customer=await rpc('create_pos_customer',{name:'Default Kon Dong'});
+ assert.equal((await q('select route_id from public.customers where id=$1',[customer]))[0].route_id,ids.route);
+ const explicit=await rpc('create_pos_customer',{name:'Explicit route',route_id:ids.route});
+ assert.equal((await q('select route_id from public.customers where id=$1',[explicit]))[0].route_id,ids.route);
+ await admin();await q("update public.routes set code='OTHER' where id=$1",[ids.route]);await q("update public.routes set code='R-CHO_HUYEN',name='Kon Dơng' where id=$1",[ids.otherRoute]);
+ await as('staff');await fails(()=>rpc('create_pos_customer',{name:'Foreign default'}),/outside assigned scope/);
+});
+scenario('common package prices let assigned staff sell half packages and new customers immediately',async()=>{
+ await as('staff');
+ const rates=await q('select * from public.pos_package_prices where customer_id is null');assert.equal(rates.length,2);
+ const customer=await rpc('create_pos_customer',{name:'New common-price partner',route_id:ids.route});
+ const p={customer_id:customer,expected_total:28000,lines:rates.map(r=>({package_unit:r.package_unit,quantity:0.5,price_version:r.version,price_id:r.id}))};
+ const id=await rpc('post_pos_package_sale',p,'common-half-sale');
+ assert.equal(await rpc('post_pos_package_sale',p,'common-half-sale'),id);
+ await admin();const lines=await q('select * from public.pos_package_lines where sale_id=$1',[id]);
+ assert.equal(Number(lines.find(l=>l.package_unit==='bi').unit_price),16000);
+ assert.equal(Number(lines.find(l=>l.package_unit==='hop').unit_price),40000);
+ assert.ok(lines.every(l=>Number(l.quantity)===0.5 && Number(l.pieces_per_package)===10));
+ assert.equal(Number((await q('select net_amount from public.sales where id=$1',[id]))[0].net_amount),28000);
+ assert.equal((await q('select * from public.cash_movements where sale_id=$1',[id])).length,1);
+ await as('staff');await fails(()=>rpc('set_pos_package_price',{customer_id:null,package_unit:'bi',amount:1,pieces_per_package:10}),/Not authorized/);
+ await as('outsider');assert.equal((await q('select * from public.pos_package_prices')).length,0);
+});
+scenario('customer package override wins over common price and a changed quote source must be confirmed again',async()=>{
+ const rate=(await q("select * from public.pos_package_prices where customer_id is null and package_unit='bi'"))[0];
+ await rpc('set_pos_package_price',{customer_id:ids.customer,package_unit:'bi',amount:16000,pieces_per_package:10});
+ const old={customer_id:ids.customer,expected_total:16000,lines:[{package_unit:'bi',quantity:1,price_version:rate.version,price_id:rate.id}]};
+ await as('staff');await fails(()=>rpc('post_pos_package_sale',old),/Giá đã thay đổi/);
+ const own=(await q("select * from public.pos_package_prices where customer_id=$1 and package_unit='bi'",[ids.customer]))[0];
+ await rpc('post_pos_package_sale',{...old,lines:[{...old.lines[0],price_id:own.id}]});
+});
+async function packageSale() {
+ await as('manager');
+ for(const [unit,amount,pack] of [['bi',40000,10],['hop',60000,6]]) await rpc('set_pos_package_price',{customer_id:ids.customer,package_unit:unit,amount,pieces_per_package:pack});
+ await as('staff');
+ const payload={customer_id:ids.customer,expected_total:160000,lines:[{package_unit:'bi',quantity:2.5,price_version:1},{package_unit:'hop',quantity:1,price_version:1}]};
+ const id=await rpc('post_pos_package_sale',payload,'quantity-sale-key');
+ return {id,payload,lines:await q('select * from public.pos_package_lines where sale_id=$1',[id])};
+}
+scenario('quantity-first POS posts cash once without product lines; allocation completes without a second financial entry',async()=>{
+ const {id,payload,lines}=await packageSale();
+ assert.equal(await rpc('post_pos_package_sale',payload,'quantity-sale-key'),id);
+ assert.equal((await q('select * from public.sale_items where sale_id=$1',[id])).length,0);
+ const bi=lines.find(l=>l.package_unit==='bi'),hop=lines.find(l=>l.package_unit==='hop');
+ await rpc('allocate_pos_packages',{sale_id:id,version:1,lines:[{line_id:bi.id,product_id:ids.donut,quantity:1}]});
+ assert.equal((await q('select * from public.sale_items where sale_id=$1',[id])).length,0);
+ const full={sale_id:id,version:2,lines:[{line_id:bi.id,product_id:ids.donut,quantity:1},{line_id:bi.id,product_id:ids.kem,quantity:1.5},{line_id:hop.id,product_id:ids.tieu,quantity:1}]};
+ await rpc('allocate_pos_packages',full,'allocation-complete');
+ assert.equal(await rpc('allocate_pos_packages',full,'allocation-complete'),id);
+ await admin();
+ assert.equal(Number((await q('select sum(line_amount) amount from public.sale_items where sale_id=$1',[id]))[0].amount),160000);
+ assert.equal((await q('select status from public.pos_package_sales where id=$1',[id]))[0].status,'complete');
+ const cash=await q('select * from public.cash_movements where sale_id=$1',[id]);assert.equal(cash.length,1);assert.equal(Number(cash[0].amount),160000);
+ const sale=(await q('select * from public.sales where id=$1',[id]))[0];assert.equal(Number(sale.net_amount),160000);assert.equal(Number(sale.collected_amount),160000);
+ assert.equal(Number((await q('select paid_amount from public.receivables where sale_id=$1',[id]))[0].paid_amount),160000);
+ await as('staff');await fails(()=>rpc('allocate_pos_packages',{...full,version:3}),/hoàn tất/);
+});
+scenario('quantity-first POS rejects stale price, missing rates, foreign customers, non-finite quantities and price overrides',async()=>{
+ const {id,payload}=await packageSale();
+ await fails(()=>rpc('set_pos_package_price',{customer_id:ids.customer,package_unit:'bi',amount:1,pieces_per_package:10}),/Not authorized/);
+ await fails(()=>rpc('post_pos_package_sale',{...payload,customer_id:ids.otherCustomer}),/outside assigned scope/);
+ await fails(()=>rpc('post_pos_package_sale',{...payload,unit_price:1}),/server controlled/);
+ for(const value of ['NaN','Infinity',-1,0,0.01]) await fails(()=>rpc('post_pos_package_sale',{...payload,lines:[{package_unit:'bi',quantity:value,price_version:1}]}),/không hợp lệ/);
+ await as('manager');await rpc('set_pos_package_price',{customer_id:ids.customer,package_unit:'bi',amount:50000,pieces_per_package:10});await as('staff');
+ await fails(()=>rpc('post_pos_package_sale',payload),/Giá đã thay đổi/);
+ await fails(()=>rpc('post_pos_package_sale',{...payload,lines:[{package_unit:'unknown',quantity:1,price_version:1}]}),/chưa có giá/);
+ await admin();assert.equal(Number((await q('select unit_price from public.pos_package_lines where sale_id=$1 and package_unit=\'bi\'',[id]))[0].unit_price),40000);
+});
+scenario('quantity-first allocation enforces scope, version, total and atomic rollback of a saved partial allocation',async()=>{
+ const {id,lines}=await packageSale();const bi=lines.find(l=>l.package_unit==='bi');
+ const p={sale_id:id,version:1,lines:[{line_id:bi.id,product_id:ids.donut,quantity:1}]};
+ await rpc('allocate_pos_packages',p);
+ await fails(()=>rpc('allocate_pos_packages',p),/Version conflict/);
+ await fails(()=>rpc('allocate_pos_packages',{...p,version:2,lines:[{line_id:bi.id,product_id:ids.donut,quantity:2},{line_id:bi.id,product_id:ids.kem,quantity:1}]}),/vượt/);
+ assert.equal((await q('select * from public.pos_package_allocations')).length,1);
+ await as('outsider');assert.equal((await q('select * from public.pos_package_sales')).length,0);await fails(()=>rpc('allocate_pos_packages',{...p,version:2}),/Not authorized/);
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.staff]);await as('staff');
+ assert.equal((await q('select * from public.pos_package_sales')).length,0);await fails(()=>rpc('post_pos_package_sale',{},'quantity-sale-key'),/Not authorized/);
+});
 before(async()=>{
  db=await PGlite.create(); await db.exec(baselineSql()); await db.exec(catalogueSeed);
  await applyTestMigrations(db);

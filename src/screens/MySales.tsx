@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { Button, Card, C, Empty, s } from '../components/ui';
+import { PackageAllocation } from '../components/PackageAllocation';
+import { packageLabel } from '../lib/packagePrices';
 import { useApp } from '../lib/context';
 import { dateLabel, decimal, errorMessage, money, quantity, shortId } from '../lib/format';
 import { supabase, readRows, type Row } from '../lib/supabase';
@@ -20,6 +22,7 @@ type Sale = {
 type Summary = { balance: number; sales: Sale[] };
 export function MySales() {
   const a = useApp();
+  const [allocation, setAllocation] = useState('');
   const [summary, setSummary] = useState<Summary | null>(null),
     [reports, setReports] = useState<Row<'pos_cash_closes'>[]>([]),
     [error, setError] = useState(''),
@@ -192,6 +195,25 @@ export function MySales() {
             </Text>
           ))}
           {!!x.note && <Text style={s.text}>Ghi chú: {x.note}</Text>}
+          {a.data.packageSales.some((p) => p.id === x.id) && (
+            <>
+              <Text style={s.text}>
+                {a.data.packageLines
+                  .filter((l) => l.sale_id === x.id)
+                  .map((l) => `${quantity(l.quantity)} ${packageLabel(l.package_unit)}`)
+                  .join(' · ')}
+              </Text>
+              <Button
+                title={
+                  a.data.packageSales.find((p) => p.id === x.id)?.status === 'complete'
+                    ? 'Xem loại bánh đã điền'
+                    : 'Điền loại bánh'
+                }
+                secondary
+                onPress={() => setAllocation(x.id)}
+              />
+            </>
+          )}
           {a.data.sales.some((sale) => sale.id === x.id) && (
             <Button
               title={a.role === 'staff' ? 'Chi tiết bán hàng' : 'Chi tiết / trả hàng'}
@@ -201,6 +223,7 @@ export function MySales() {
           )}
         </Card>
       ))}
+      {!!allocation && <PackageAllocation saleId={allocation} onClose={() => setAllocation('')} />}
     </View>
   );
 }

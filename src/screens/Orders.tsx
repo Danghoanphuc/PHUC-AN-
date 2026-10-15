@@ -1,5 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import * as Crypto from 'expo-crypto';
 import {
   Button,
@@ -24,38 +32,99 @@ import {
   shortId,
   today,
   validDate,
+  labels,
 } from '../lib/format';
 import { submitMutation } from '../lib/mutations';
 import { supabase, type Row } from '../lib/supabase';
+import { d, DetailDisclosure } from '../components/OrderDetailLayout';
 import { CustomerContact } from '../components/CustomerContact';
+import { packageLabel } from '../lib/packagePrices';
+import { searchText } from '../lib/pos';
 
 export function Orders() {
   const a = useApp(),
     [kind, setKind] = useState('customer'),
     [search, setSearch] = useState(''),
     [filter, setFilter] = useState('all');
+  const [filterOpen, setFilterOpen] = useState(false);
   const isPurchase = kind === 'purchase';
   const orders = isPurchase ? a.data.purchases : a.data.orders;
-  const filtered = orders
+  const entries = orders.map((o) => ({
+    id: o.id,
+    detailKind: (isPurchase ? 'purchase' : 'order') as 'purchase' | 'order' | 'sale',
+    status: o.status as string,
+    name:
+      'customer_id' in o
+        ? a.data.customers.find((c) => c.id === o.customer_id)?.name
+        : a.data.suppliers.find((c) => c.id === o.supplier_id)?.name,
+    date: 'delivery_date' in o ? o.delivery_date : o.expected_date,
+    createdAt: o.created_at,
+    pos: false,
+    waiting: false,
+    description: '',
+    total: null as number | null,
+    collected: null as number | null,
+    note: o.note || '',
+  }));
+  if (!isPurchase) {
+    for (const order of a.data.packageSales) {
+      const sale = a.data.sales.find((x) => x.id === order.id);
+      if (!sale) continue;
+      entries.push({
+        id: sale.id,
+        detailKind: 'sale',
+        status: order.status === 'complete' ? 'completed' : 'pos_paid',
+        name: a.data.customers.find((c) => c.id === order.customer_id)?.name,
+        date: sale.sale_date,
+        createdAt: sale.created_at,
+        pos: true,
+        waiting: order.status !== 'complete',
+        description: a.data.packageLines
+          .filter((l) => l.sale_id === sale.id)
+          .map((l) => `${quantity(l.quantity)} ${packageLabel(l.package_unit)}`)
+          .join(' · '),
+        total: sale.net_amount,
+        collected: sale.collected_amount,
+        note: sale.note || '',
+      });
+    }
+  }
+  const filtered = entries
     .filter(
       (o) =>
-        (filter === 'all' || o.status === filter) &&
-        `${o.id} ${'customer_id' in o ? a.data.customers.find((c) => c.id === o.customer_id)?.name : a.data.suppliers.find((c) => c.id === o.supplier_id)?.name}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
+        (filter === 'all' ||
+          (filter === 'pos' ? o.pos : filter === 'waiting' ? o.waiting : o.status === filter)) &&
+        searchText(`${o.id} ${o.name || ''} ${o.note}`).includes(searchText(search.trim())),
     )
-    .sort((x, y) => y.created_at.localeCompare(x.created_at));
+    .sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+  const filters = [
+    { v: 'all', t: 'Tất cả' },
+    ...(!isPurchase
+      ? [
+          { v: 'pos', t: 'Bán POS' },
+          { v: 'waiting', t: 'Chờ điền bánh' },
+        ]
+      : []),
+    { v: 'draft', t: 'Nháp' },
+    { v: 'confirmed', t: 'Đã xác nhận' },
+    { v: 'partial', t: 'Một phần' },
+    { v: 'completed', t: 'Hoàn tất' },
+  ];
+  const quickFilters = filters.filter(
+    (f) => ['all', 'pos', 'waiting'].includes(f.v) || f.v === filter,
+  );
   return (
-    <View style={s.page}>
+    <View style={orderListStyles.page}>
       <View style={s.between}>
-        <View>
-          <Text style={s.label}>TỪ ĐẶT HÀNG ĐẾN GIAO HÀNG</Text>
-          <Text style={s.title}>Đơn hàng</Text>
+        <View style={[s.row, { gap: 10 }]}>
+          <Text style={s.h2}>Đơn hàng</Text>
+          <Text style={orderListStyles.meta}>{filtered.length} đơn hàng</Text>
         </View>
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Tạo đơn mới"
           onPress={() => (isPurchase ? a.editPurchase() : a.editOrder())}
-          style={[s.avatar, { backgroundColor: C.green }]}
+          style={orderListStyles.add}
         >
           <Icon name="add-outline" color="white" size={24} />
         </Pressable>
@@ -68,62 +137,117 @@ export function Orders() {
             setFilter('all');
           }}
           values={[
-            { value: 'customer', label: 'Khách đặt' },
+            { value: 'customer', label: 'Đơn bán' },
             { value: 'purchase', label: 'Mua nguyên liệu' },
           ]}
         />
       )}
-      <Search
-        value={search}
-        onChange={setSearch}
-        placeholder={isPurchase ? 'Tìm mã đơn, nhà cung cấp…' : 'Tìm mã đơn, tên khách…'}
-      />
+      <View style={[s.row, { gap: 8 }]}>
+        <View style={orderListStyles.search}>
+          <Icon name="search-outline" size={18} color={C.muted} />
+          <TextInput
+            accessibilityLabel={isPurchase ? 'Tìm mã đơn, nhà cung cấp…' : 'Tìm mã đơn, tên khách…'}
+            placeholder={isPurchase ? 'Tìm mã đơn, nhà cung cấp…' : 'Tìm mã đơn, tên khách…'}
+            value={search}
+            onChangeText={setSearch}
+            style={orderListStyles.searchInput}
+          />
+          {!!search && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Xóa tìm đơn"
+              onPress={() => setSearch('')}
+              style={orderListStyles.tool}
+            >
+              <Icon name="close-circle" size={17} color={C.muted} />
+            </Pressable>
+          )}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Lọc đơn hàng"
+          accessibilityState={{ expanded: filterOpen }}
+          onPress={() => setFilterOpen(true)}
+          style={[orderListStyles.tool, { backgroundColor: filter !== 'all' ? C.soft : C.paper }]}
+        >
+          <Icon name="options-outline" size={20} />
+        </Pressable>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8 }}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{ gap: 6 }}
       >
-        {[
-          { v: 'all', t: 'Tất cả' },
-          { v: 'draft', t: 'Nháp' },
-          { v: 'confirmed', t: 'Đã xác nhận' },
-          { v: 'partial', t: 'Một phần' },
-          { v: 'completed', t: 'Hoàn tất' },
-        ].map((f) => (
+        {quickFilters.map((f) => (
           <Pressable
             key={f.v}
             accessibilityRole="button"
+            accessibilityLabel={f.t}
+            accessibilityState={{ selected: filter === f.v }}
             onPress={() => setFilter(f.v)}
-            style={[s.pill, filter === f.v && { backgroundColor: C.green }]}
+            style={[orderListStyles.filter, filter === f.v && { backgroundColor: C.green }]}
           >
             <Text style={[s.pillText, filter === f.v && { color: 'white' }]}>{f.t}</Text>
           </Pressable>
         ))}
       </ScrollView>
-      <Text style={s.muted}>{filtered.length} đơn hàng</Text>
-      {filtered.map((o) => (
-        <Card
-          key={o.id}
-          onPress={() => a.openDetail({ kind: isPurchase ? 'purchase' : 'order', id: o.id })}
-        >
-          <View style={s.between}>
-            <Text style={s.label}>#{shortId(o.id)}</Text>
-            <Tag value={o.status} />
-          </View>
-          <Text style={s.h2}>
-            {'customer_id' in o
-              ? a.data.customers.find((c) => c.id === o.customer_id)?.name
-              : a.data.suppliers.find((c) => c.id === o.supplier_id)?.name}
-          </Text>
-          <View style={s.between}>
-            <Text style={s.muted}>
-              {isPurchase ? 'Dự kiến nhận' : 'Ngày giao'} ·{' '}
-              {dateLabel('delivery_date' in o ? o.delivery_date : o.expected_date)}
-            </Text>
-            <Icon name="arrow-forward-outline" size={19} />
-          </View>
-        </Card>
-      ))}
+      <View style={orderListStyles.list}>
+        {filtered.map((o, index) => (
+          <Pressable
+            key={o.id}
+            testID="order-list-row"
+            accessibilityRole="button"
+            onPress={() => a.openDetail({ kind: o.detailKind, id: o.id })}
+            style={({ pressed }) => [
+              orderListStyles.row,
+              index > 0 && { borderTopWidth: 1, borderTopColor: C.line },
+              pressed && { backgroundColor: C.soft },
+            ]}
+          >
+            <View style={s.between}>
+              <Text numberOfLines={1} style={orderListStyles.name}>
+                {o.name || 'Chưa có tên'}
+              </Text>
+              {o.pos ? (
+                <Text style={orderListStyles.amount}>{money(o.total)}</Text>
+              ) : (
+                <Text
+                  style={[
+                    orderListStyles.status,
+                    { color: o.status === 'completed' ? C.green : C.muted },
+                  ]}
+                >
+                  {labels[o.status] || o.status}
+                </Text>
+              )}
+            </View>
+            {o.pos && (
+              <View style={s.between}>
+                <Text numberOfLines={1} style={[orderListStyles.meta, { flex: 1 }]}>
+                  {o.description}
+                </Text>
+                <Text style={[orderListStyles.status, { color: o.waiting ? C.orange : C.green }]}>
+                  {o.waiting ? 'Chờ điền loại bánh' : 'Đã điền đủ loại bánh'}
+                </Text>
+              </View>
+            )}
+            <View style={s.between}>
+              <Text style={orderListStyles.meta}>
+                {o.pos ? 'POS · ' : ''}#{shortId(o.id)} · {dateLabel(o.date)}
+              </Text>
+              <View style={[s.row, { gap: 5 }]}>
+                {o.pos && (
+                  <Text style={[orderListStyles.meta, { color: C.green }]}>
+                    {o.collected === o.total ? 'Đã thu đủ' : `Đã thu ${money(o.collected)}`}
+                  </Text>
+                )}
+                <Icon name="chevron-forward" size={14} color={C.muted} />
+              </View>
+            </View>
+          </Pressable>
+        ))}
+      </View>
       {!filtered.length && (
         <Card>
           <Empty
@@ -136,9 +260,91 @@ export function Orders() {
           />
         </Card>
       )}
+      {filterOpen && (
+        <Sheet title="Lọc đơn hàng" onClose={() => setFilterOpen(false)}>
+          <ScrollView contentContainerStyle={{ padding: 14, gap: 6 }}>
+            {filters.map((f) => (
+              <Pressable
+                key={f.v}
+                accessibilityRole="button"
+                accessibilityLabel={f.t}
+                accessibilityState={{ selected: filter === f.v }}
+                onPress={() => {
+                  setFilter(f.v);
+                  setFilterOpen(false);
+                }}
+                style={[
+                  s.between,
+                  {
+                    minHeight: 48,
+                    paddingHorizontal: 14,
+                    borderRadius: 10,
+                    backgroundColor: filter === f.v ? C.soft : C.paper,
+                  },
+                ]}
+              >
+                <Text style={s.text}>{f.t}</Text>
+                {filter === f.v && <Icon name="checkmark" size={18} />}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </Sheet>
+      )}
     </View>
   );
 }
+const orderListStyles = StyleSheet.create({
+  page: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 20, gap: 6 },
+  add: {
+    width: 40,
+    minHeight: 40,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.green,
+  },
+  search: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingLeft: 10,
+    backgroundColor: C.paper,
+    borderWidth: 1,
+    borderColor: C.line,
+    borderRadius: 10,
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 42,
+    fontSize: 13,
+    color: C.ink,
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  tool: {
+    width: 40,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+  filter: {
+    minHeight: 36,
+    paddingHorizontal: 11,
+    justifyContent: 'center',
+    borderRadius: 9,
+    backgroundColor: C.soft,
+  },
+  list: { backgroundColor: C.paper, borderRadius: 12, overflow: 'hidden' },
+  row: { minHeight: 70, paddingHorizontal: 12, paddingVertical: 10, gap: 4 },
+  name: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 20, fontWeight: '600', color: C.ink },
+  amount: { fontSize: 15, fontWeight: '700', color: C.green },
+  meta: { fontSize: 11, lineHeight: 16, color: C.muted },
+  status: { fontSize: 11, lineHeight: 17, fontWeight: '600' },
+});
 export function OrderDetail({ id }: { id: string }) {
   const a = useApp();
   const o = a.data.orders.find((o) => o.id === id);
@@ -241,53 +447,56 @@ export function OrderDetail({ id }: { id: string }) {
         );
       },
     });
+  const deliveries = a.data.sales.filter((x) => x.customer_order_id === id);
   return (
-    <View style={s.page}>
-      <View style={s.between}>
-        <Text style={s.label}>
-          ĐƠN #{shortId(id)} · V{o.version}
-        </Text>
-        <Tag value={o.status} />
-      </View>
-      <Text style={s.title}>{customer?.name ?? 'Khách hàng'}</Text>
-      <CustomerContact customer={customer} />
-      <Card>
-        <Text style={s.muted}>
-          Giao {dateLabel(o.delivery_date)} ·{' '}
+    <View style={d.page}>
+      <View style={d.header}>
+        <View style={s.between}>
+          <Text style={d.title}>{customer?.name ?? 'Khách hàng'}</Text>
+          <Tag value={o.status} />
+        </View>
+        <Text style={d.meta}>
+          #{shortId(id)} · Giao {dateLabel(o.delivery_date)} ·{' '}
           {a.data.routes.find((r) => r.id === o.route_id)?.name ?? 'Chưa có tuyến'}
         </Text>
-        <Text style={s.text}>{o.delivery_address_snapshot || 'Chưa cập nhật địa chỉ giao'}</Text>
-        {o.note && <Text style={s.muted}>{o.note}</Text>}
-      </Card>
-      <Text style={s.h2}>Sản phẩm · {items.length} dòng</Text>
-      {items.map((i) => (
-        <Card key={i.id}>
-          <Text style={s.h3}>
-            {a.data.products.find((p) => p.id === i.product_id)?.name ?? i.requested_name}
-          </Text>
-          <Text style={s.muted}>
-            {quantity(i.order_qty)} bì đặt = {quantity(i.pieces_qty)} cái
-          </Text>
-          <View style={s.between}>
-            <Text style={s.text}>
-              {i.unit_price_snapshot === null
-                ? 'Chờ chọn sản phẩm'
-                : `${money(i.unit_price_snapshot)} / ${i.price_unit}`}
-            </Text>
-            <Text style={s.muted}>Đã giao {quantity(i.delivered_pieces)} cái</Text>
+        <CustomerContact customer={customer} compact />
+        {!!o.delivery_address_snapshot && <Text style={d.meta}>{o.delivery_address_snapshot}</Text>}
+        {!!o.note && <Text style={d.meta}>Ghi chú: {o.note}</Text>}
+      </View>
+      <View style={d.summary}>
+        <View style={s.between}>
+          <Text style={d.name}>Giá trị dự kiến</Text>
+          <Text style={d.total}>{money(total)}</Text>
+        </View>
+        {o.discount_pct > 0 && <Text style={d.meta}>Đã giảm {quantity(o.discount_pct)}%</Text>}
+      </View>
+      <Text style={d.section}>Sản phẩm · {items.length} dòng</Text>
+      <View style={d.group}>
+        {items.map((i, index) => (
+          <View key={i.id} style={[d.row, index > 0 && d.divided]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={d.name}>
+                {a.data.products.find((p) => p.id === i.product_id)?.name ?? i.requested_name}
+              </Text>
+              <Text style={d.meta}>
+                {quantity(i.pieces_qty)} cái · Đã giao {quantity(i.delivered_pieces)} cái
+              </Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 2 }}>
+              <Text style={d.amount}>{quantity(i.order_qty)} bì</Text>
+              <Text style={d.meta}>
+                {i.unit_price_snapshot === null
+                  ? 'Chờ chọn sản phẩm'
+                  : money(
+                      ((i.pieces_qty ?? 0) / (i.pieces_per_price_unit ?? 1)) *
+                        i.unit_price_snapshot *
+                        (1 - o.discount_pct / 100),
+                    )}
+              </Text>
+            </View>
           </View>
-        </Card>
-      ))}
-      <Card>
-        <View style={s.between}>
-          <Text style={s.text}>Chiết khấu</Text>
-          <Text style={s.h3}>{quantity(o.discount_pct)}%</Text>
-        </View>
-        <View style={s.between}>
-          <Text style={s.h3}>Giá trị dự kiến</Text>
-          <Text style={s.h2}>{money(total)}</Text>
-        </View>
-      </Card>
+        ))}
+      </View>
       {o.status === 'draft' && (canManage || o.created_by === a.userId) && (
         <Button title="Sửa đơn nháp" secondary onPress={() => a.editOrder(o)} />
       )}
@@ -298,21 +507,34 @@ export function OrderDetail({ id }: { id: string }) {
         <Button title="Ghi giao hàng" icon="bicycle-outline" onPress={deliver} />
       )}
       {canManage && ['draft', 'confirmed', 'partial'].includes(o.status) && (
-        <Button title="Hủy phần chưa giao" secondary onPress={() => transition('cancelled')} />
+        <DetailDisclosure title="Thao tác khác">
+          <Button title="Hủy phần chưa giao" secondary onPress={() => transition('cancelled')} />
+        </DetailDisclosure>
       )}
-      {a.data.sales
-        .filter((x) => x.customer_order_id === id)
-        .map((x) => (
-          <Card key={x.id} onPress={() => a.openDetail({ kind: 'sale', id: x.id })}>
-            <View style={s.between}>
-              <Text style={s.h3}>Lần giao #{shortId(x.id)}</Text>
-              <Tag value={x.payment_status} />
-            </View>
-            <Text style={s.muted}>
-              {dateLabel(x.sale_date)} · {money(x.net_amount)}
-            </Text>
-          </Card>
-        ))}
+      {deliveries.length > 0 && (
+        <>
+          <Text style={d.section}>Lịch sử giao · {deliveries.length} lần</Text>
+          <View style={d.group}>
+            {deliveries.map((x, index) => (
+              <Pressable
+                key={x.id}
+                accessibilityRole="button"
+                onPress={() => a.openDetail({ kind: 'sale', id: x.id })}
+                style={[d.row, index > 0 && d.divided]}
+              >
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={d.name}>Lần giao #{shortId(x.id)}</Text>
+                  <Text style={d.meta}>{dateLabel(x.sale_date)}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  <Text style={d.amount}>{money(x.net_amount)}</Text>
+                  <Tag value={x.payment_status} />
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
