@@ -8,7 +8,7 @@ Triển khai dạng Direct Upload bằng Wrangler, chưa liên kết tự deploy
 
 Build: `npm ci` rồi `npm run build:web`. Node 22. Tệp `public/_headers` được Expo sao chép sang dist để trình duyệt kiểm tra phiên bản HTML mới, cache tài nguyên có hash và thiết lập HTTP headers.
 
-Pages bỏ qua thư mục node_modules, kể cả trong assets do Expo export. `scripts/prepare-web.mjs` sao chép tài nguyên đó sang assets/vendor; public/_redirects rewrite URL cũ sang thư mục mới để giữ nguyên bundle có hash. Không bỏ bước prepare-web khi deploy.
+Icon web dùng SVG nội tuyến từ Ionicons, không tải icon font hoặc phụ thuộc rewrite đường dẫn font. `scripts/generate-web-icons.mjs` tự lấy các icon đang dùng trước khi build; iOS/Android vẫn dùng bộ icon native. Test giao diện chặn toàn bộ tải font, kiểm tra icon sau tải mới và reload. `scripts/prepare-web.mjs` đặt ngôn ngữ trang là tiếng Việt và giữ xử lý assets/vendor cho tài nguyên Expo khác; không bỏ bước này khi deploy.
 
 Deploy bằng Wrangler 4.151.0: `npx --yes wrangler@4.151.0 pages deploy dist --project-name phuc-an --branch main`. Cần đăng nhập Cloudflare qua `wrangler login` hoặc token Pages có quyền trên đúng tài khoản. Không lưu token vào source hay biến EXPO_PUBLIC_*.
 

@@ -3,6 +3,32 @@ import { mkdirSync } from 'node:fs';
 const project = 'https://jirwetvjrgllghiikprf.supabase.co';
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
+test('web icons render on a cold load and reload with all font downloads blocked', async ({
+  page,
+}) => {
+  const fontRequests: string[] = [];
+  await page.route(/\.(ttf|otf|woff2?)(\?|$)/, (route) => {
+    fontRequests.push(route.request().url());
+    return route.abort();
+  });
+  await mock(page);
+  await login(page);
+  const homeIcon = page
+    .getByRole('tab', { name: 'Hôm nay', exact: true })
+    .locator('svg[data-icon="home"]');
+  await expect(homeIcon).toBeVisible();
+  await expect(homeIcon.locator('path')).not.toHaveCount(0);
+  await page.getByRole('tab', { name: 'POS', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Trang chính', exact: true }).locator('svg'),
+  ).toBeVisible();
+  await page.reload();
+  await expect(page.locator('svg[data-icon]').first()).toBeVisible();
+  expect(await page.locator('body').innerText()).not.toMatch(/[\uE000-\uF8FF]/);
+  expect(fontRequests).toEqual([]);
+  await page.screenshot({ path: 'test-output/screenshots/icons-with-fonts-blocked.png' });
+});
+
 for (const mode of ['quantity', 'product', 'profile'])
   test(`new customer defaults to Kon Dong with multiple routes (${mode})`, async ({ page }) => {
     const { tables, calls } = await mock(page);

@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export --platform web && node scripts/prepare-web.mjs",
+    "build:web": "node scripts/generate-web-icons.mjs && expo export --platform web && node scripts/prepare-web.mjs",
     "test": "node --test --test-reporter=spec tests/database.test.mjs tests/account-server.test.mjs",
     "test:smoke": "node tests/build-live-smoke.mjs && node tests/check-live-smoke.mjs",
     "build:ios": "expo export --platform ios --output-dir dist-ios",
@@ -19,6 +19,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.9",
     "@playwright/test": "1.64.0",
+    "ionicons": "7.4.0",
     "prettier": "3.9.10",
     "sharp": "0.35.3"
   },
