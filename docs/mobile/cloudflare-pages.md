@@ -1,7 +1,7 @@
 # Cloudflare Pages
 
 Production: https://phuc-an.pages.dev · Project: `phuc-an` · Branch: `main`.
-Deployment production ngày 16/10/2026: https://01a81c5d.phuc-an.pages.dev · source commit `1b7fa90` (POS theo số lượng, giá khách, Kho và đơn hàng gọn). Đã đối chiếu HTML production trùng bản build; JS và font trả HTTP 200. Cả 23 bài kiểm thử giao diện chạy trên production đều đạt với API mock, không tạo dữ liệu thử trên Supabase thật.
+Deployment production ngày 16/10/2026: https://56d9da5a.phuc-an.pages.dev · source commit `cd7a2f1`. Web đã dùng SVG nội tuyến thay cho icon font. Đã đối chiếu HTML production trùng bản build, JS trả HTTP 200 và bundle không còn URL font. Cả 24 bài kiểm thử giao diện local đạt; bài chặn toàn bộ font tải xuống cũng đạt trên production sau tải mới và reload, với API mock cô lập.
 Triển khai dạng Direct Upload bằng Wrangler, chưa liên kết tự deploy qua GitHub. Sau mỗi bản sửa đã kiểm thử, chạy lại build/deploy bên dưới; địa chỉ production không đổi.
 
 Ứng dụng web Expo xuất thành thư mục `dist`. Supabase tiếp tục xử lý đăng nhập, phân quyền và nghiệp vụ; không cần Worker hoặc database Cloudflare.
