@@ -964,7 +964,7 @@ function ProductPOS() {
                   )}
                   <Button
                     title="Tạo khách & bán ngay"
-                    disabled={locked || !routes.length}
+                    disabled={locked || !selectedRoute}
                     onPress={() => void createCustomer()}
                   />
                 </View>

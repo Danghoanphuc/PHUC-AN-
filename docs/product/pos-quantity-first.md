@@ -27,4 +27,4 @@ POS gọn gồm thanh khách, hai dòng số lượng với nút +½ / +1 và fo
 
 Giá riêng có thể mở trực tiếp tại Khách hàng → hồ sơ khách → Giá riêng bì / hộp, hoặc biểu tượng nhãn giá cạnh tên khách trong POS. Khung giá ghi rõ nguồn giá chung / giá riêng. Chủ và quản lý có nút Sửa; nhân viên xem giá kèm lời giải thích quyền, không được đổi giá.
 
-Khách mới mặc định chọn tuyến Kon Dơng (tuyến Chợ huyện đổi tên, giữ nguyên mã liên kết). Áp dụng cho POS theo số lượng, POS chọn món và màn hình thêm khách. Có thể chọn tuyến khác được phép. Tài khoản không được phân công Kon Dơng không được tự tạo khách vào tuyến này.
+Khách mới chọn tuyến từ danh mục được phép. Không còn mặc định cứng Kon Dơng: khi có nhiều tuyến phải chọn, chỉ tự chọn nếu có đúng một tuyến đang dùng được phép. Chủ/quản lý quản lý danh mục và phân công tại Thêm → Tuyến bán hàng. [Chi tiết tuyến linh hoạt và 12 địa bàn Mang Yang cũ](sales-routes.md).

@@ -1,9 +1,7 @@
 import type { Row } from './supabase';
 
-/** Call with the actor's allowed routes. Keep the stable route code when its display name changes. */
+/** Auto-select only when there is exactly one allowed active route. No location is hardcoded. */
 export function defaultCustomerRoute(routes: Row<'routes'>[]) {
   const active = routes.filter((r) => r.is_active);
-  return (
-    active.find((r) => r.code === 'R-CHO_HUYEN')?.id || (active.length === 1 ? active[0]!.id : '')
-  );
+  return active.length === 1 ? active[0]!.id : '';
 }

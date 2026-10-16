@@ -2212,6 +2212,7 @@ export type Database = {
       }
       routes: {
         Row: {
+          version: number
           code: string
           created_at: string
           id: string
@@ -2221,6 +2222,7 @@ export type Database = {
           note: string | null
         }
         Insert: {
+          version?: number
           code: string
           created_at?: string
           id?: string
@@ -2230,6 +2232,7 @@ export type Database = {
           note?: string | null
         }
         Update: {
+          version?: number
           code?: string
           created_at?: string
           id?: string
@@ -2794,6 +2797,8 @@ export type Database = {
       }
     }
     Functions: {
+      save_sales_route: { Args: { payload: Json; request_key: string }; Returns: string }
+      set_sales_route_staff: { Args: { payload: Json; request_key: string }; Returns: string }
       set_customer_active: { Args: { payload: Json; request_key: string }; Returns: string }
 
       allocate_pos_packages: {

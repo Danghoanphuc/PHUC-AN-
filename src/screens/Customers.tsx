@@ -33,6 +33,7 @@ export function Customers() {
         {
           name: 'route',
           label: 'Tuyến',
+          required: true,
           value: defaultCustomerRoute(a.data.routes),
           options: a.data.routes
             .filter((r) => r.is_active)
@@ -252,7 +253,9 @@ export function CustomerDetail({ id }: { id: string }) {
           name: 'route',
           label: 'Tuyến',
           value: c!.route_id ?? '',
-          options: a.data.routes.map((r) => ({ value: r.id, label: r.name })),
+          options: a.data.routes
+            .filter((r) => r.is_active || r.id === c!.route_id)
+            .map((r) => ({ value: r.id, label: r.name + (r.is_active ? '' : ' · Ngừng dùng') })),
         },
         {
           name: 'policy',

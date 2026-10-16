@@ -30,7 +30,9 @@ test('web icons render on a cold load and reload with all font downloads blocked
 });
 
 for (const mode of ['quantity', 'product', 'profile'])
-  test(`new customer defaults to Kon Dong with multiple routes (${mode})`, async ({ page }) => {
+  test(`new customer chooses a route explicitly when several routes exist (${mode})`, async ({
+    page,
+  }) => {
     const { tables, calls } = await mock(page);
     tables.routes[0].name = 'Kon Dơng';
     tables.routes[0].code = 'R-CHO_HUYEN';
@@ -40,12 +42,12 @@ for (const mode of ['quantity', 'product', 'profile'])
       await page.getByRole('tab', { name: 'Khách hàng', exact: true }).click();
       await page.getByLabel('Thêm khách hàng', { exact: true }).click();
       await page.getByLabel('Tên khách hàng', { exact: true }).fill('Khách tuyến mặc định');
-      await expect(page.getByRole('button', { name: 'Tuyến', exact: true })).toContainText(
-        'Kon Dơng',
-      );
+      await expect(page.getByRole('button', { name: 'Tuyến', exact: true })).toContainText('Chọn…');
+      await page.getByRole('button', { name: 'Tuyến', exact: true }).click();
+      await page.getByRole('button', { name: 'Hra', exact: true }).click();
       await page.getByRole('button', { name: 'Lưu thông tin', exact: true }).click();
       await expect(page.getByText('Khách tuyến mặc định', { exact: true })).toBeVisible();
-      expect(tables.customers.at(-1).route_id).toBe(id(3));
+      expect(tables.customers.at(-1).route_id).toBe(id(990));
     } else {
       await page.getByRole('tab', { name: 'POS', exact: true }).click();
       if (mode === 'product')
@@ -54,11 +56,16 @@ for (const mode of ['quantity', 'product', 'profile'])
       await page.getByLabel('Tìm khách POS', { exact: true }).fill('Khách tuyến mặc định');
       await expect(
         page.getByRole('button', { name: 'Tuyến của khách mới', exact: true }),
-      ).toContainText('Kon Dơng');
+      ).toContainText('Chọn…');
+      await expect(
+        page.getByRole('button', { name: 'Tạo khách & bán ngay', exact: true }),
+      ).toBeDisabled();
+      await page.getByRole('button', { name: 'Tuyến của khách mới', exact: true }).click();
+      await page.getByRole('button', { name: 'Hra', exact: true }).click();
       await page.getByRole('button', { name: 'Tạo khách & bán ngay', exact: true }).click();
       await expect(page.getByText('Khách tuyến mặc định', { exact: true })).toBeVisible();
       expect(calls.find((c) => c.name === 'create_pos_customer')!.body.payload.route_id).toBe(
-        id(3),
+        id(990),
       );
     }
   });
@@ -452,6 +459,87 @@ test('staff cannot remove or restore customers and archived customers stay out o
   await expect(page.getByRole('button', { name: 'Xóa khách', exact: true })).toHaveCount(0);
 });
 
+for (const role of ['owner', 'manager'])
+  test(`sales routes can be added renamed assigned retired and restored (${role})`, async ({
+    page,
+  }) => {
+    const { tables, calls } = await mock(page, role);
+    tables.app_members.push({ user_id: id(7), role: 'staff', active: true });
+    tables.member_profiles.push({
+      user_id: id(7),
+      full_name: 'Nhân viên tuyến',
+      contact_phone: '',
+    });
+    await login(page);
+    await page.getByRole('tab', { name: 'Thêm', exact: true }).click();
+    await page.getByText('Tuyến bán hàng', { exact: true }).click();
+    await page.getByRole('button', { name: 'Thêm tuyến bán hàng', exact: true }).click();
+    await page.getByLabel('Tên tuyến', { exact: true }).fill('Chợ chiều');
+    await page.getByRole('button', { name: 'Lưu tuyến', exact: true }).click();
+    await expect(page.getByText('Chợ chiều', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Sửa tuyến Chợ chiều', exact: true }).click();
+    await page.getByLabel('Tên tuyến', { exact: true }).fill('Chợ chiều thứ ba');
+    await page.getByRole('button', { name: 'Lưu tuyến', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Phân công tuyến Chợ chiều thứ ba', exact: true })
+      .click();
+    await page
+      .getByRole('checkbox', { name: 'Giao tuyến cho Nhân viên tuyến', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Lưu phân công', exact: true }).click();
+    await expect(page.getByText('0 khách đang dùng · 1 nhân viên', { exact: true })).toBeVisible();
+    const route = tables.routes.find((r) => r.name === 'Chợ chiều thứ ba');
+    expect(
+      tables.route_assignments.some((x) => x.route_id === route.id && x.user_id === id(7)),
+    ).toBe(true);
+    await page
+      .getByRole('button', { name: 'Ngừng dùng tuyến Chợ chiều thứ ba', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Ngừng dùng tuyến', exact: true }).click();
+    await expect(page.getByText('Chợ chiều thứ ba', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Tuyến ngừng dùng', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Khôi phục tuyến Chợ chiều thứ ba', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Khôi phục tuyến', exact: true }).click();
+    await page.getByRole('button', { name: 'Tuyến đang dùng', exact: true }).click();
+    await expect(page.getByText('Chợ chiều thứ ba', { exact: true })).toBeVisible();
+    await page
+      .getByRole('button', { name: 'Phân công tuyến Chợ chiều thứ ba', exact: true })
+      .click();
+    await page
+      .getByRole('checkbox', { name: 'Giao tuyến cho Nhân viên tuyến', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Lưu phân công', exact: true }).click();
+    expect(tables.route_assignments.some((x) => x.route_id === route.id)).toBe(false);
+    expect(calls.filter((c) => c.name === 'save_sales_route')).toHaveLength(4);
+    if (role === 'owner')
+      await page.screenshot({ path: 'test-output/screenshots/sales-routes-management.png' });
+  });
+test('staff sees only assigned route choices and cannot manage the route catalogue', async ({
+  page,
+}) => {
+  const { tables } = await mock(page, 'staff');
+  tables.routes.push({
+    id: id(991),
+    name: 'Tuyến chưa giao',
+    code: 'R-UNASSIGNED',
+    is_active: true,
+    version: 1,
+  });
+  await login(page, true);
+  await page.getByRole('tab', { name: 'Thêm', exact: true }).click();
+  await page.getByText('Tuyến được giao', { exact: true }).click();
+  await expect(page.getByText('Tuyến kiểm thử', { exact: true })).toBeVisible();
+  await expect(page.getByText('Tuyến chưa giao', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Thêm tuyến bán hàng', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole('button', { name: 'Sửa tuyến Tuyến kiểm thử', exact: true }),
+  ).toHaveCount(0);
+});
+
 const day = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Ho_Chi_Minh',
   year: 'numeric',
@@ -485,7 +573,7 @@ async function mock(page: Page, role = 'owner') {
         credit_limit: null,
       },
     ],
-    routes: [{ id: id(3), name: 'Tuyến kiểm thử', code: 'TEST', is_active: true }],
+    routes: [{ id: id(3), name: 'Tuyến kiểm thử', code: 'TEST', is_active: true, version: 1 }],
     products: [
       {
         id: id(4),
@@ -615,6 +703,29 @@ async function mock(page: Page, role = 'owner') {
     if (url.pathname.includes('/rpc/')) {
       calls.push({ name, body });
       const p = body?.payload;
+      if (name === 'save_sales_route') {
+        const route = tables.routes.find((r) => r.id === p.route_id);
+        if (route) Object.assign(route, p, { version: route.version + 1 });
+        else
+          tables.routes.push({
+            id: id(880 + tables.routes.length),
+            code: 'R-CUSTOM',
+            name: p.name,
+            note: p.note,
+            is_active: true,
+            version: 1,
+          });
+        return reply(route?.id || tables.routes.at(-1).id);
+      }
+      if (name === 'set_sales_route_staff') {
+        tables.route_assignments = tables.route_assignments.filter(
+          (x) => x.route_id !== p.route_id,
+        );
+        for (const user_id of p.user_ids)
+          tables.route_assignments.push({ user_id, route_id: p.route_id });
+        tables.routes.find((r) => r.id === p.route_id).version++;
+        return reply(p.route_id);
+      }
       if (name === 'set_customer_active') {
         const customer = tables.customers.find((c) => c.id === p.customer_id);
         customer.is_active = p.is_active;

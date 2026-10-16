@@ -24,6 +24,8 @@ POS tự lưu giỏ theo tài khoản. Mục Lịch sử / Chốt tiền hiển 
 
 Chủ/quản lý có thể [xóa và khôi phục khách](docs/product/customer-archive.md). Khách bị ẩn khỏi danh sách bán nhưng giữ lịch sử và giá riêng; chặn xóa khi còn công nợ, đơn chưa xong hoặc POS chưa điền đủ bánh.
 
+[Tuyến bán hàng](docs/product/sales-routes.md) gồm gợi ý 12 địa bàn Mang Yang cũ và cho phép thêm, đổi tên, ngừng dùng/khôi phục tùy ý. Chủ/quản lý phân công tuyến cho nhân viên; tạo khách không còn cố định Kon Dơng.
+
 - [Báo cáo triển khai và kiểm thử](docs/database/implementation.md)
 - [Contract RPC cho mobile](docs/database/api-contract.md)
 - [TypeScript types từ Supabase](src/types/database.ts)

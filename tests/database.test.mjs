@@ -7,15 +7,50 @@ import { applyTestMigrations } from './migrations.mjs';
 
 import {ids,catalogueSeed,memberSeed} from './fixtures.mjs';
 let db;
-scenario('new POS customers default to Kon Dong while enforcing route assignments',async()=>{
- await admin();await q("update public.routes set code='R-CHO_HUYEN',name='Kon Dơng' where id=$1",[ids.route]);
- await as('staff');
- const customer=await rpc('create_pos_customer',{name:'Default Kon Dong'});
+scenario('new customers require route selection when several routes are allowed, without a hardcoded location',async()=>{
+ await as('staff');const customer=await rpc('create_pos_customer',{name:'Only allowed route'});
  assert.equal((await q('select route_id from public.customers where id=$1',[customer]))[0].route_id,ids.route);
- const explicit=await rpc('create_pos_customer',{name:'Explicit route',route_id:ids.route});
- assert.equal((await q('select route_id from public.customers where id=$1',[explicit]))[0].route_id,ids.route);
- await admin();await q("update public.routes set code='OTHER' where id=$1",[ids.route]);await q("update public.routes set code='R-CHO_HUYEN',name='Kon Dơng' where id=$1",[ids.otherRoute]);
- await as('staff');await fails(()=>rpc('create_pos_customer',{name:'Foreign default'}),/outside assigned scope/);
+ await as('manager');await fails(()=>rpc('create_pos_customer',{name:'Choose route'}),/Chọn tuyến/);
+ await rpc('set_sales_route_staff',{route_id:ids.otherRoute,expected_version:1,user_ids:[ids.staff]});
+ await as('staff');await fails(()=>rpc('create_pos_customer',{name:'Several assigned routes'}),/Chọn tuyến/);
+ const explicit=await rpc('create_pos_customer',{name:'Explicit second route',route_id:ids.otherRoute});
+ assert.equal((await q('select route_id from public.customers where id=$1',[explicit]))[0].route_id,ids.otherRoute);
+});
+scenario('former Mang Yang route suggestions are seeded once without replacing existing routes',async()=>{
+ const names=['Kon Dơng','Ayun','Đak Ta Ley','Đăk Yă','Đak Djrăng','Hra','Kon Thụp','Đak Jơ Ta','Lơ Pang','Đê Ar','Kon Chiêng','Đăk Trôi'];
+ const rows=await q('select name from public.routes');for(const name of names) assert.equal(rows.filter(r=>r.name===name).length,1);
+ assert.equal((await q('select route_id from public.customers where id=$1',[ids.customer]))[0].route_id,ids.route);
+});
+scenario('managers create rename retire and restore arbitrary routes while retaining customer links',async()=>{
+ const p={name:'Tuyến tự chọn · Chợ chiều',note:'Đi thứ ba'};
+ const id=await rpc('save_sales_route',p,'create-custom-route');assert.equal(await rpc('save_sales_route',p,'create-custom-route'),id);
+ const customer=await rpc('create_pos_customer',{name:'Partner route',route_id:id});
+ await rpc('save_sales_route',{route_id:id,expected_version:1,name:'Tuyến chợ chiều mới',note:'Đi thứ tư'});
+ await fails(()=>rpc('save_sales_route',{route_id:id,expected_version:1,name:'Stale name'}),/Tuyến đã thay đổi/);
+ await rpc('save_sales_route',{route_id:id,expected_version:2,name:'Tuyến chợ chiều mới',is_active:false});
+ await fails(()=>rpc('create_pos_customer',{name:'Inactive route',route_id:id}),/Active assigned route/);
+ await fails(()=>rpc('save_sales_route',{name:'  tuyến chợ chiều mới  '}),/Tên tuyến đã có/);
+ assert.equal((await q('select route_id from public.customers where id=$1',[customer]))[0].route_id,id);
+ await rpc('save_sales_route',{route_id:id,expected_version:3,name:'Tuyến chợ chiều mới',is_active:true});
+ assert.equal((await q('select is_active,version from public.routes where id=$1',[id]))[0].version,4);
+ assert.equal((await q("select * from public.audit_events where action='route.saved' and entity_id=$1",[id])).length,4);
+ await fails(()=>q("update public.routes set name='Bypass' where id=$1",[id]),/permission denied/);
+});
+scenario('route assignments grant and revoke only the selected staff route and cannot be self-assigned',async()=>{
+ const id=await rpc('save_sales_route',{name:'Tuyến phân công thử'});
+ await as('staff');await fails(()=>rpc('save_sales_route',{name:'Staff forbidden'}),/Not authorized/);
+ await fails(()=>rpc('set_sales_route_staff',{route_id:id,expected_version:1,user_ids:[ids.staff]}),/Not authorized/);
+ await fails(()=>rpc('create_pos_customer',{name:'Unassigned',route_id:id}),/outside assigned scope/);
+ await as('manager');assert.equal((await q('select * from public.app_members where user_id=$1',[ids.owner])).length,0);
+ assert.equal((await q('select * from public.app_members where user_id=$1',[ids.staff])).length,1);
+ await fails(()=>rpc('set_sales_route_staff',{route_id:id,expected_version:1,user_ids:[ids.owner]}),/Chỉ phân công/);
+ await rpc('set_sales_route_staff',{route_id:id,expected_version:1,user_ids:[ids.staff]});
+ await as('staff');const c=await rpc('create_pos_customer',{name:'Assigned partner',route_id:id});
+ await as('manager');await fails(()=>rpc('set_sales_route_staff',{route_id:id,expected_version:1,user_ids:[]}),/Tuyến đã thay đổi/);
+ await rpc('set_sales_route_staff',{route_id:id,expected_version:2,user_ids:[]});
+ await as('staff');await fails(()=>rpc('create_pos_customer',{name:'Revoked',route_id:id}),/outside assigned scope/);
+ assert.equal((await q('select * from public.customers where id=$1',[c])).length,1); // direct customer assignment remains
+ await as('outsider');await fails(()=>rpc('save_sales_route',{name:'Nonmember'}),/Not authorized/);
 });
 scenario('common package prices let assigned staff sell half packages and new customers immediately',async()=>{
  await as('staff');

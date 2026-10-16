@@ -5,6 +5,7 @@ import { useApp, managerRole } from '../lib/context';
 import { decimal, labels, money, quantity, shortId, today } from '../lib/format';
 import { pendingMutation, submitMutation, type Pending } from '../lib/mutations';
 import { supabase } from '../lib/supabase';
+import { Routes } from './Routes';
 import { manageAccount } from '../lib/accounts';
 function reviewText(kind: string, ref: string, raw: unknown) {
   const d = (raw ?? {}) as Record<string, unknown>;
@@ -82,6 +83,7 @@ export function More() {
       },
     });
   }
+  if (page === 'routes') return <Routes onClose={() => setPage('menu')} />;
   if (page !== 'menu')
     return (
       <View style={s.page}>
@@ -355,29 +357,7 @@ export function More() {
                     />
                   )}
                   {m.role === 'staff' && (
-                    <Button
-                      title="Phân công tuyến"
-                      secondary
-                      onPress={() =>
-                        a.openForm({
-                          title: 'Phân công tuyến cho nhân viên',
-                          fields: [
-                            {
-                              name: 'route',
-                              label: 'Tuyến được giao',
-                              options: a.data.routes.map((r) => ({ value: r.id, label: r.name })),
-                              required: true,
-                            },
-                          ],
-                          submit: async (v) => {
-                            const { error } = await supabase
-                              .from('route_assignments')
-                              .upsert({ user_id: m.user_id, route_id: v.route ?? '' });
-                            if (error) throw error;
-                          },
-                        })
-                      }
-                    />
+                    <Button title="Phân công tuyến" secondary onPress={() => setPage('routes')} />
                   )}
                 </Card>
               );
@@ -539,6 +519,12 @@ export function More() {
         </Card>
       )}
       {[
+        {
+          id: 'routes',
+          label: manager ? 'Tuyến bán hàng' : 'Tuyến được giao',
+          icon: 'map-outline' as const,
+          show: true,
+        },
         { id: 'debt', label: 'Bán hàng & công nợ', icon: 'wallet-outline' as const, show: true },
         { id: 'stock', label: 'Kho nguyên liệu', icon: 'cube-outline' as const, show: manager },
         {
