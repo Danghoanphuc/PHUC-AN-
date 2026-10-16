@@ -35,8 +35,9 @@ export function POS() {
   }, [a.userId]);
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
-      <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+      <View style={{ paddingHorizontal: 8, paddingVertical: 3 }}>
         <Segment
+          compact
           values={[
             { value: 'quantity', label: 'Bán theo số lượng' },
             { value: 'product', label: 'Chọn theo món' },
@@ -70,7 +71,7 @@ function ProductPOS() {
   const [pane, setPane] = useState<'menu' | 'cart'>('menu');
   const [width, setWidth] = useState(0);
   const wide = width >= 900;
-  const columns = wide ? (width >= 1200 ? 8 : 5) : width >= 540 ? 5 : 3;
+  const columns = wide ? (width >= 1200 ? 8 : 5) : width >= 540 ? 5 : width >= 360 ? 4 : 3;
   const key = useRef(Crypto.randomUUID()),
     createKey = useRef(Crypto.randomUUID()),
     posting = useRef(false);
@@ -529,37 +530,6 @@ function ProductPOS() {
       style={{ flex: 1, minHeight: 0 }}
     >
       <View style={styles.head}>
-        <View style={s.between}>
-          <View style={s.row}>
-            <View style={styles.brandIcon}>
-              <Icon name="storefront-outline" color={C.paper} />
-            </View>
-            <View>
-              <Text style={s.h3}>POS · Bán nhanh</Text>
-              <Text style={styles.caption}>PHÚC AN · QUẦY BÁN HÀNG</Text>
-            </View>
-          </View>
-          <View style={[s.row, { gap: 6 }]}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Lịch sử / Chốt tiền"
-              disabled={locked}
-              onPress={() => a.go('my-sales')}
-              style={styles.qtyButton}
-            >
-              <Icon name="time-outline" />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Trang chính"
-              disabled={locked}
-              onPress={() => a.go('home')}
-              style={styles.qtyButton}
-            >
-              <Icon name="home-outline" />
-            </Pressable>
-          </View>
-        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Chọn hoặc tạo khách POS"
@@ -567,21 +537,41 @@ function ProductPOS() {
           onPress={openCustomer}
           style={styles.customer}
         >
-          <View style={styles.customerAvatar}>
-            <Icon name="person-outline" size={19} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={s.h3}>
-              {customer?.name || 'Chọn / tạo khách'}
-            </Text>
-            <Text style={styles.caption}>
-              {customer
-                ? `${customer.customer_type || 'Bạn hàng'} · Giá theo khách`
-                : 'Tìm tên, số điện thoại hoặc tạo nhanh'}
-            </Text>
-          </View>
-          <Text style={styles.customerAction}>{customer ? 'Đổi khách' : 'Chọn khách'}</Text>
-          <Icon name="chevron-forward" size={16} />
+          <Icon name="person-outline" size={18} />
+          <Text numberOfLines={1} style={[styles.customerName, { flex: 1 }]}>
+            {customer?.name || 'Chọn / tạo khách'}
+          </Text>
+          <Icon name="chevron-down" size={14} />
+        </Pressable>
+        {!wide && customer && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={pane === 'cart' ? 'Về menu món' : 'Xem giỏ hàng POS'}
+            accessibilityState={{ selected: pane === 'cart' }}
+            onPress={() => setPane(pane === 'cart' ? 'menu' : 'cart')}
+            style={styles.cartToggle}
+          >
+            <Icon name={pane === 'cart' ? 'grid-outline' : 'bag-handle-outline'} size={18} />
+            <Text style={styles.customerAction}>{pane === 'cart' ? 'Món' : cart.length}</Text>
+          </Pressable>
+        )}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Lịch sử / Chốt tiền"
+          disabled={locked}
+          onPress={() => a.go('my-sales')}
+          style={styles.headerTool}
+        >
+          <Icon name="time-outline" size={19} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Trang chính"
+          disabled={locked}
+          onPress={() => a.go('home')}
+          style={styles.headerTool}
+        >
+          <Icon name="home-outline" size={19} />
         </Pressable>
       </View>
       {(!!notice || !!error || !!pending || draftUnavailable) && (
@@ -651,41 +641,6 @@ function ProductPOS() {
         </View>
       ) : (
         <>
-          {!wide && (
-            <View style={styles.shortcuts}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Về menu món"
-                accessibilityState={{ selected: pane === 'menu' }}
-                onPress={() => setPane('menu')}
-                style={[styles.paneTab, pane === 'menu' && styles.activeTab]}
-              >
-                <Icon name="grid-outline" size={18} color={pane === 'menu' ? C.green : C.muted} />
-                <Text style={[styles.tabText, pane === 'menu' && { color: C.green }]}>
-                  Chọn món
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Xem giỏ hàng POS"
-                accessibilityState={{ selected: pane === 'cart' }}
-                onPress={() => setPane('cart')}
-                style={[styles.paneTab, pane === 'cart' && styles.activeTab]}
-              >
-                <Icon
-                  name="bag-handle-outline"
-                  size={18}
-                  color={pane === 'cart' ? C.green : C.muted}
-                />
-                <Text style={[styles.tabText, pane === 'cart' && { color: C.green }]}>
-                  Giỏ hàng
-                </Text>
-                <View style={styles.tabCount}>
-                  <Text style={styles.tabCountText}>{cart.length}</Text>
-                </View>
-              </Pressable>
-            </View>
-          )}
           <View style={[styles.workspace, wide && { flexDirection: 'row' }]}>
             <View
               testID="pos-catalog-pane"
@@ -793,25 +748,18 @@ function ProductPOS() {
                 testID="pos-scroll"
                 keyboardShouldPersistTaps="handled"
                 style={{ flex: 1 }}
-                contentContainerStyle={{ padding: 14, gap: 10, paddingBottom: 24 }}
+                contentContainerStyle={{ padding: 10, gap: 6, paddingBottom: 16 }}
               >
                 <View style={s.between}>
-                  <Text style={s.h3}>
+                  <Text style={styles.menuHeading}>
                     {query.trim()
                       ? 'Kết quả tìm kiếm'
                       : group === 'favorite'
                         ? 'Món hay lấy'
                         : groups.find((g) => g.id === group)?.name}
                   </Text>
-                  <Text style={s.muted}>{menu.length} món</Text>
+                  <Text style={styles.caption}>{menu.length} món</Text>
                 </View>
-                {group === 'favorite' && !query.trim() && (
-                  <Text style={styles.caption}>
-                    {favorites.size
-                      ? 'Gợi ý theo lịch sử đặt hàng của khách'
-                      : 'Chưa có lịch sử · Ưu tiên món có giá'}
-                  </Text>
-                )}
                 <View testID="pos-menu" style={styles.grid}>
                   {menu.map((p) => {
                     const q = quote(p.id),
@@ -843,7 +791,7 @@ function ProductPOS() {
                                     ? 'ice-cream-outline'
                                     : 'fast-food-outline'
                               }
-                              size={28}
+                              size={23}
                               color={count > 0 ? C.paper : C.green}
                             />
                           </View>
@@ -879,23 +827,6 @@ function ProductPOS() {
                   </View>
                 )}
               </ScrollView>
-              {!wide && cart.length > 0 && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Mở giỏ hàng vừa chọn"
-                  onPress={() => setPane('cart')}
-                  style={styles.cartPeek}
-                >
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.peekTitle}>Đã chọn {cart.length} món</Text>
-                    <Text numberOfLines={1} style={styles.caption}>
-                      {cart.map((p) => p.name).join(' · ')}
-                    </Text>
-                  </View>
-                  <Text style={styles.customerAction}>Xem đơn</Text>
-                  <Icon name="arrow-forward" size={18} />
-                </Pressable>
-              )}
             </View>
             <View
               testID="pos-cart-pane"
@@ -923,8 +854,7 @@ function ProductPOS() {
       )}
       <View style={styles.footer} accessibilityLabel="Tổng tiền và chốt POS">
         <View style={{ flex: 1 }}>
-          <Text style={s.muted}>Tổng tiền</Text>
-          <Text style={[s.h2, { fontSize: 26 }]}>
+          <Text accessibilityLabel="Tổng tiền POS" style={[s.h2, { fontSize: 22, lineHeight: 26 }]}>
             {invalid && !pending
               ? '—'
               : money(
@@ -937,12 +867,21 @@ function ProductPOS() {
             Tổng bì: {invalid && !pending ? '—' : quantity(totalBags)}
           </Text>
         </View>
-        <View style={{ flex: 1.3, gap: 3, maxWidth: wide ? 322 : undefined }}>
-          <Button
-            title={saving ? 'Đang ghi…' : pending ? 'Thử lại yêu cầu' : 'Chốt bán'}
+        <View style={{ flex: 1.3, gap: 2, maxWidth: wide ? 322 : undefined }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={saving ? 'Đang ghi…' : pending ? 'Thử lại yêu cầu' : 'Chốt bán'}
             disabled={saving || a.busy || (!pending && !valid)}
             onPress={() => void checkout()}
-          />
+            style={[
+              styles.checkoutButton,
+              (saving || a.busy || (!pending && !valid)) && { opacity: 0.45 },
+            ]}
+          >
+            <Text style={s.buttonText}>
+              {saving ? 'Đang ghi…' : pending ? 'Thử lại yêu cầu' : 'Chốt bán'}
+            </Text>
+          </Pressable>
           <Text style={{ fontSize: 10, color: C.muted, textAlign: 'center' }}>
             Xác nhận đã thu đủ tiền mặt
           </Text>
@@ -1038,28 +977,13 @@ function ProductPOS() {
 }
 const styles = StyleSheet.create({
   caption: { fontSize: 11, color: C.muted, lineHeight: 17 },
-  brandIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: C.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: C.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   customerAction: { fontSize: 12, fontWeight: '700', color: C.green },
   workspace: { flex: 1, minHeight: 0 },
   catalog: { flex: 1, minWidth: 0, minHeight: 0 },
   catalogTools: {
-    padding: 14,
-    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 6,
     backgroundColor: C.paper,
     borderBottomWidth: 1,
     borderBottomColor: C.line,
@@ -1077,32 +1001,19 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     minWidth: 0,
-    minHeight: 48,
-    paddingVertical: 12,
-    fontSize: 14,
+    minHeight: 36,
+    paddingVertical: 6,
+    fontSize: 13,
     color: C.ink,
   },
-  clearSearch: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  paneTab: {
-    flex: 1,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-    borderRadius: 10,
-  },
-  activeTab: { backgroundColor: C.paper },
-  tabText: { fontSize: 14, fontWeight: '600', color: C.muted },
-  tabCount: { backgroundColor: C.green, borderRadius: 7, paddingHorizontal: 7, paddingVertical: 2 },
-  tabCountText: { color: C.paper, fontSize: 11, fontWeight: '700' },
+  clearSearch: { minWidth: 36, minHeight: 36, alignItems: 'center', justifyContent: 'center' },
   activeGroup: { backgroundColor: C.green, borderColor: C.green },
   groupText: { color: C.muted, fontSize: 12, fontWeight: '600' },
   selectedTile: { backgroundColor: '#F1F6EE', borderColor: C.green },
   productMark: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.soft,
@@ -1115,7 +1026,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     width: '100%',
   },
-  price: { fontSize: 13, lineHeight: 18, fontWeight: '700', color: C.green },
+  price: { fontSize: 12, lineHeight: 18, fontWeight: '700', color: C.green },
   bagTotal: { fontSize: 12, lineHeight: 18, color: C.green, fontWeight: '600' },
   cartPane: {
     minHeight: 0,
@@ -1131,17 +1042,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cartPeek: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: C.soft,
-    borderTopWidth: 1,
-    borderTopColor: C.line,
-  },
-  peekTitle: { fontSize: 12, fontWeight: '700', color: C.green },
   continueButton: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1162,47 +1062,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   head: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    gap: 6,
     borderBottomWidth: 1,
     borderBottomColor: C.line,
     backgroundColor: C.paper,
   },
-  shortcuts: {
-    flexDirection: 'row',
-    gap: 4,
-    padding: 4,
-    marginHorizontal: 14,
-    marginVertical: 10,
-    borderRadius: 13,
-    backgroundColor: '#E6E9DF',
-  },
   customer: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 38,
     backgroundColor: C.soft,
-    padding: 12,
-    borderRadius: 13,
+    paddingHorizontal: 8,
+    borderRadius: 9,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  customerName: { fontSize: 14, fontWeight: '600', color: C.ink },
+  headerTool: { width: 36, height: 38, justifyContent: 'center', alignItems: 'center' },
+  cartToggle: {
+    minWidth: 48,
+    height: 38,
+    paddingHorizontal: 6,
+    gap: 5,
+    borderRadius: 9,
+    backgroundColor: C.soft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuHeading: { fontSize: 12, lineHeight: 18, fontWeight: '600', color: C.muted },
+  checkoutButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: C.green,
+    paddingHorizontal: 10,
   },
   group: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
-    borderRadius: 11,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    minHeight: 30,
+    borderRadius: 8,
     backgroundColor: C.paper,
     borderWidth: 1,
     borderColor: C.line,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -4 },
   tile: {
-    minHeight: 112,
-    padding: 8,
-    gap: 4,
+    minHeight: 92,
+    padding: 6,
+    gap: 3,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: C.paper,
@@ -1253,8 +1171,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderTopWidth: 1,
     borderTopColor: C.line,
     backgroundColor: C.paper,

@@ -1115,6 +1115,7 @@ test('POS separates catalog and cart, keeps search pinned and supports safe quan
   page,
 }) => {
   const { tables, calls } = await mock(page, 'staff');
+  await page.setViewportSize({ width: 390, height: 700 });
   for (let n = 0; n < 20; n++) {
     tables.products.push({
       ...tables.products[0],
@@ -1137,6 +1138,20 @@ test('POS separates catalog and cart, keeps search pinned and supports safe quan
   await page.getByRole('button', { name: 'Chọn khách Khách kiểm thử', exact: true }).click();
   await page.getByRole('button', { name: 'Tất cả', exact: true }).click();
   const menu = page.getByTestId('pos-menu');
+  const tiles = menu.getByRole('button');
+  const firstTile = await tiles.nth(0).boundingBox();
+  const fourthTile = await tiles.nth(3).boundingBox();
+  const twelfthTile = await tiles.nth(11).boundingBox();
+  const checkoutFooter = await page
+    .getByLabel('Tổng tiền và chốt POS', { exact: true })
+    .boundingBox();
+  expect(firstTile!.y).toBeLessThanOrEqual(225);
+  expect(firstTile!.height).toBeLessThanOrEqual(96);
+  expect(fourthTile!.y).toBe(firstTile!.y);
+  expect(twelfthTile!.y + twelfthTile!.height).toBeLessThanOrEqual(checkoutFooter!.y);
+  expect(checkoutFooter!.height).toBeLessThanOrEqual(72);
+  await expect(page.getByText('POS · Bán nhanh', { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: 'test-output/screenshots/pos-compact-iphone.png' });
   expect(await menu.evaluate((el) => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
   await page.getByTestId('pos-scroll').evaluate((el) => {
     el.scrollTop = el.scrollHeight;
@@ -1236,7 +1251,7 @@ test('POS shows menu beside cart on tablet and desktop, retains basket when resi
   await page.getByRole('button', { name: 'Xem tất cả món', exact: true }).click();
   await page.getByLabel('Tìm món POS', { exact: true }).fill('banh donut');
   await expect(page.getByTestId('pos-menu').getByRole('button')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Mở giỏ hàng vừa chọn', exact: true }).click();
+  await page.getByRole('button', { name: 'Xem giỏ hàng POS', exact: true }).click();
   await expect(qty).toHaveValue('2.5');
   await page.getByRole('button', { name: 'Tiếp tục chọn món', exact: true }).click();
   await expect(page.getByLabel('Tìm món POS', { exact: true })).toHaveValue('banh donut');

@@ -260,23 +260,34 @@ export function Segment({
   values,
   selected,
   onSelect,
+  compact = false,
 }: {
   values: { value: string; label: string }[];
   selected: string;
   onSelect: (v: string) => void;
+  compact?: boolean;
 }) {
   return (
-    <View style={s.segment}>
+    <View style={[s.segment, compact && { padding: 3, borderRadius: 9 }]}>
       {values.map((v) => (
         <Pressable
           accessibilityRole="tab"
           accessibilityState={{ selected: selected === v.value }}
           key={v.value}
           onPress={() => onSelect(v.value)}
-          style={[s.segmentItem, selected === v.value && { backgroundColor: C.paper }]}
+          style={[
+            s.segmentItem,
+            compact && { paddingVertical: 4, minHeight: 30, borderRadius: 7 },
+            selected === v.value && { backgroundColor: C.paper },
+          ]}
         >
           <Text
-            style={[s.muted, { fontWeight: '600' }, selected === v.value && { color: C.green }]}
+            style={[
+              s.muted,
+              { fontWeight: '600' },
+              compact && { fontSize: 12, lineHeight: 18 },
+              selected === v.value && { color: C.green },
+            ]}
           >
             {v.label}
           </Text>
