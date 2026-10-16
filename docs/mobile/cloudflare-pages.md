@@ -1,7 +1,7 @@
 # Cloudflare Pages
 
 Production: https://phuc-an.pages.dev · Project: `phuc-an` · Branch: `main`.
-Deployment production ngày 16/10/2026: https://d31fbb0a.phuc-an.pages.dev · source commit `bcf9a1e`. Có xóa/khôi phục khách cho chủ/quản lý, giữ nguyên lịch sử và giá, chặn công nợ/đơn chưa xong/POS chưa điền đủ bánh. Migration đã áp dụng; smoke máy chủ rollback toàn bộ dữ liệu tạm. Typecheck, 58 bài nghiệp vụ, 30 bài giao diện và build iOS đạt; HTML production trùng bản build. POS gọn và icon SVG nội tuyến giữ nguyên.
+Deployment production ngày 16/10/2026: https://81a71d65.phuc-an.pages.dev · source commit `35bf3ff`. Bổ sung 12 địa bàn Mang Yang cũ, quản lý tuyến tùy ý và phân công cho nhân viên; bỏ mặc định cứng Kon Dơng. Migration đã áp dụng, dữ liệu khách/đơn/bán/phân công/tài khoản hiện có được đối chiếu không đổi; smoke máy chủ rollback toàn bộ dữ liệu tạm. Typecheck, 61 bài nghiệp vụ, 33 bài giao diện và build iOS đạt; HTML production trùng bản build. Các test chọn tuyến, quản lý tuyến và font chạy lại trên production bằng API mock cô lập.
 Triển khai dạng Direct Upload bằng Wrangler, chưa liên kết tự deploy qua GitHub. Sau mỗi bản sửa đã kiểm thử, chạy lại build/deploy bên dưới; địa chỉ production không đổi.
 
 Ứng dụng web Expo xuất thành thư mục `dist`. Supabase tiếp tục xử lý đăng nhập, phân quyền và nghiệp vụ; không cần Worker hoặc database Cloudflare.
