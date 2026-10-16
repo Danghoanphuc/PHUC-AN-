@@ -1,7 +1,7 @@
 # Cloudflare Pages
 
 Production: https://phuc-an.pages.dev · Project: `phuc-an` · Branch: `main`.
-Deployment production ngày 16/10/2026: https://56d9da5a.phuc-an.pages.dev · source commit `cd7a2f1`. Web đã dùng SVG nội tuyến thay cho icon font. Đã đối chiếu HTML production trùng bản build, JS trả HTTP 200 và bundle không còn URL font. Cả 24 bài kiểm thử giao diện local đạt; bài chặn toàn bộ font tải xuống cũng đạt trên production sau tải mới và reload, với API mock cô lập.
+Deployment production ngày 16/10/2026: https://3fd01a35.phuc-an.pages.dev · source commit `8c738e3`. POS chọn món đã gom khách/giỏ/lịch sử/trang chính vào một hàng, bỏ header và thanh đổi pane lặp; iPhone 390px có 4 món/hàng, thấy ít nhất 12 món trọn vẹn ở chiều cao 700px, footer tối đa 72px. Cả 24 bài kiểm thử giao diện local đạt. HTML production trùng bản build; test bố cục POS và test chặn font cũng đạt trên production với API mock cô lập. Icon web tiếp tục dùng SVG nội tuyến.
 Triển khai dạng Direct Upload bằng Wrangler, chưa liên kết tự deploy qua GitHub. Sau mỗi bản sửa đã kiểm thử, chạy lại build/deploy bên dưới; địa chỉ production không đổi.
 
 Ứng dụng web Expo xuất thành thư mục `dist`. Supabase tiếp tục xử lý đăng nhập, phân quyền và nghiệp vụ; không cần Worker hoặc database Cloudflare.
