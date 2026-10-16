@@ -72,7 +72,9 @@ export function Home() {
           { title: 'Cần giao', value: String(deliveries.length), icon: 'bicycle-outline' as const },
           {
             title: manager ? 'Công nợ còn' : 'Khách phụ trách',
-            value: manager ? money(debt) : String(a.data.customers.length),
+            value: manager
+              ? money(debt)
+              : String(a.data.customers.filter((c) => c.is_active).length),
             icon: manager ? ('wallet-outline' as const) : ('people-outline' as const),
           },
         ].map((m) => (

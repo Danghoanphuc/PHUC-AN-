@@ -377,6 +377,81 @@ test('quantity-first draft restores silently and pending collection retries the 
   await page.reload();
   await expect(page.getByLabel('Số bì bán nhanh', { exact: true })).toHaveCount(0);
 });
+
+for (const role of ['owner', 'manager'])
+  test(`customer removal is reversible and hides archived customers from selling (${role})`, async ({
+    page,
+  }) => {
+    const { tables, calls } = await mock(page, role);
+    await login(page);
+    await page.getByRole('tab', { name: 'Khách hàng', exact: true }).click();
+    await page.getByText('Khách kiểm thử', { exact: true }).click();
+    await page.getByRole('button', { name: 'Xóa khách', exact: true }).click();
+    await expect(page.getByText(/Giữ nguyên lịch sử, chứng từ và giá riêng/)).toBeVisible();
+    await page.getByLabel('Lý do xóa', { exact: true }).fill('Khách ngừng mua');
+    if (role === 'owner')
+      await page.screenshot({ path: 'test-output/screenshots/customer-archive-confirm.png' });
+    await page.getByRole('button', { name: 'Xác nhận xóa khách', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Khôi phục khách', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Tạo đơn cho khách', exact: true }),
+    ).toBeDisabled();
+    await page.getByRole('button', { name: 'Quay lại', exact: true }).click();
+    await expect(page.getByText('Khách kiểm thử', { exact: true })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'POS', exact: true }).click();
+    await page.getByRole('button', { name: 'Chọn hoặc tạo khách POS', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Chọn khách Khách kiểm thử', exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await page.getByRole('button', { name: 'Trang chính', exact: true }).click();
+    await page.getByRole('tab', { name: 'Khách hàng', exact: true }).click();
+    await page.getByRole('button', { name: 'Khách đã xóa', exact: true }).click();
+    await page.getByText('Khách kiểm thử', { exact: true }).click();
+    await page.getByRole('button', { name: 'Khôi phục khách', exact: true }).click();
+    await page.getByRole('button', { name: 'Khôi phục khách', exact: true }).last().click();
+    await expect(page.getByRole('button', { name: 'Xóa khách', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Tạo đơn cho khách', exact: true }),
+    ).toBeEnabled();
+    expect(tables.customers[0].is_active).toBe(true);
+    expect(
+      calls.filter((c) => c.name === 'set_customer_active').map((c) => c.body.payload.is_active),
+    ).toEqual([false, true]);
+  });
+for (const blocker of ['debt', 'order', 'allocation'])
+  test(`customer removal explains unfinished work (${blocker})`, async ({ page }) => {
+    const { tables } = await mock(page);
+    if (blocker === 'debt')
+      tables.receivables.push({ id: id(220), customer_id: id(2), amount: 10000, paid_amount: 0 });
+    if (blocker === 'order')
+      tables.customer_orders.push({ id: id(220), customer_id: id(2), status: 'draft' });
+    if (blocker === 'allocation')
+      tables.pos_package_sales = [{ id: id(220), customer_id: id(2), status: 'pending' }];
+    await login(page);
+    await page.getByRole('tab', { name: 'Khách hàng', exact: true }).click();
+    await page.getByText('Khách kiểm thử', { exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Xóa khách', exact: true })).toBeDisabled();
+    await expect(page.getByText(/Chưa thể xóa:/)).toBeVisible();
+  });
+test('staff cannot remove or restore customers and archived customers stay out of the active list', async ({
+  page,
+}) => {
+  const { tables } = await mock(page, 'staff');
+  tables.customers.push({
+    ...tables.customers[0],
+    id: id(222),
+    name: 'Khách đã ngừng',
+    is_active: false,
+  });
+  await login(page, true);
+  await page.getByRole('tab', { name: 'Khách hàng', exact: true }).click();
+  await expect(page.getByText('Khách đã ngừng', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Khách đã xóa', exact: true })).toHaveCount(0);
+  await page.getByText('Khách kiểm thử', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Xóa khách', exact: true })).toHaveCount(0);
+});
+
 const day = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Ho_Chi_Minh',
   year: 'numeric',
@@ -540,6 +615,11 @@ async function mock(page: Page, role = 'owner') {
     if (url.pathname.includes('/rpc/')) {
       calls.push({ name, body });
       const p = body?.payload;
+      if (name === 'set_customer_active') {
+        const customer = tables.customers.find((c) => c.id === p.customer_id);
+        customer.is_active = p.is_active;
+        return reply(customer.id);
+      }
       if (name === 'set_pos_package_price') {
         const old = (tables.pos_package_prices ||= []).find(
           (r) => r.customer_id === p.customer_id && r.package_unit === p.package_unit,

@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { Button, Card, Empty, Icon, Search, Tag, s } from '../components/ui';
+import { Button, Card, C, Empty, Icon, Search, Tag, s } from '../components/ui';
 import { useApp, managerRole } from '../lib/context';
 import { money, quantity, shortId, today, validDate } from '../lib/format';
+import { submitMutation } from '../lib/mutations';
 import { supabase } from '../lib/supabase';
 import { CustomerPackagePrices } from '../components/CustomerPackagePrices';
 import { defaultCustomerRoute } from '../lib/customerRoute';
 export function Customers() {
   const a = useApp(),
     [search, setSearch] = useState('');
-  const customers = a.data.customers.filter((c) =>
-    `${c.name} ${c.code ?? ''} ${c.phone ?? ''}`.toLowerCase().includes(search.toLowerCase()),
+  const [archived, setArchived] = useState(false);
+  const showArchived = managerRole(a.role) && archived;
+  const customers = a.data.customers.filter(
+    (c) =>
+      c.is_active !== showArchived &&
+      `${c.name} ${c.code ?? ''} ${c.phone ?? ''}`.toLowerCase().includes(search.toLowerCase()),
   );
   function create() {
     a.openForm({
@@ -60,6 +65,38 @@ export function Customers() {
         )}
       </View>
       <Search value={search} onChange={setSearch} placeholder="Tìm tên, mã hoặc số điện thoại…" />
+      {managerRole(a.role) && (
+        <View style={[s.row, { gap: 8 }]}>
+          {[false, true].map((value) => (
+            <Pressable
+              key={String(value)}
+              accessibilityRole="button"
+              accessibilityLabel={value ? 'Khách đã xóa' : 'Khách đang dùng'}
+              accessibilityState={{ selected: showArchived === value }}
+              onPress={() => setArchived(value)}
+              style={{
+                minHeight: 36,
+                paddingHorizontal: 12,
+                justifyContent: 'center',
+                borderRadius: 9,
+                backgroundColor: showArchived === value ? C.green : C.soft,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  color: showArchived === value ? C.paper : C.green,
+                }}
+              >
+                {value ? 'Đã xóa' : 'Đang dùng'} ·{' '}
+                {a.data.customers.filter((c) => c.is_active !== value).length}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       <Text style={s.muted}>{customers.length} khách trong phạm vi của bạn</Text>
       {customers.map((c) => (
         <Card key={c.id} onPress={() => a.openDetail({ kind: 'customer', id: c.id })}>
@@ -106,6 +143,51 @@ export function CustomerDetail({ id }: { id: string }) {
   const debt = a.data.receivables
     .filter((r) => r.customer_id === id)
     .reduce((v, r) => v + r.amount - r.paid_amount, 0);
+  const openOrders = a.data.orders.filter(
+    (o) => o.customer_id === id && ['draft', 'confirmed', 'partial'].includes(o.status),
+  ).length;
+  const pendingBakes = a.data.packageSales.filter(
+    (p) => p.customer_id === id && p.status !== 'complete',
+  ).length;
+  const archiveBlockers = [
+    debt > 0 ? 'Còn công nợ ' + money(debt) : '',
+    openOrders ? openOrders + ' đơn chưa xử lý xong' : '',
+    pendingBakes ? pendingBakes + ' đơn POS chưa điền đủ bánh' : '',
+  ].filter(Boolean);
+  function changeActive() {
+    const restoring = !c!.is_active;
+    a.openForm({
+      title: restoring ? 'Khôi phục khách' : 'Xóa khách',
+      description: restoring
+        ? 'Đưa ' + c!.name + ' trở lại danh sách bán hàng, dùng lại hồ sơ và giá riêng đã lưu.'
+        : 'Ẩn ' +
+          c!.name +
+          ' khỏi danh sách bán hàng. Giữ nguyên lịch sử, chứng từ và giá riêng; có thể khôi phục tại mục Đã xóa.',
+      fields: [
+        {
+          name: 'reason',
+          label: restoring ? 'Lý do khôi phục' : 'Lý do xóa',
+          required: true,
+          value: restoring ? 'Khôi phục khách' : '',
+          multiline: true,
+        },
+      ],
+      submitLabel: restoring ? 'Khôi phục khách' : 'Xác nhận xóa khách',
+      danger: !restoring,
+      submit: async (v, key) => {
+        await submitMutation(
+          'set_customer_active',
+          {
+            customer_id: id,
+            is_active: restoring,
+            expected_is_active: c!.is_active,
+            reason: (v.reason || '').trim(),
+          },
+          key,
+        );
+      },
+    });
+  }
   function activity() {
     a.openForm({
       title: 'Ghi chăm sóc khách',
@@ -218,17 +300,55 @@ export function CustomerDetail({ id }: { id: string }) {
       <View style={s.between}>
         <Text style={s.label}>HỒ SƠ KHÁCH HÀNG</Text>
         {managerRole(a.role) && (
-          <Pressable accessibilityLabel="Sửa hồ sơ" onPress={edit}>
-            <Icon name="create-outline" />
-          </Pressable>
+          <View style={[s.row, { gap: 12 }]}>
+            {c.is_active && (
+              <Pressable accessibilityLabel="Sửa hồ sơ" onPress={edit}>
+                <Icon name="create-outline" />
+              </Pressable>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={c.is_active ? 'Xóa khách' : 'Khôi phục khách'}
+              disabled={a.busy || (c.is_active && archiveBlockers.length > 0)}
+              onPress={changeActive}
+              style={{
+                minHeight: 36,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+                opacity: a.busy || (c.is_active && archiveBlockers.length > 0) ? 0.45 : 1,
+              }}
+            >
+              <Icon
+                name={c.is_active ? 'trash-outline' : 'refresh-outline'}
+                size={17}
+                color={c.is_active ? C.red : C.green}
+              />
+              <Text
+                style={{ fontSize: 12, fontWeight: '600', color: c.is_active ? C.red : C.green }}
+              >
+                {c.is_active ? 'Xóa khách' : 'Khôi phục'}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
       <Text style={s.title}>{c.name}</Text>
+      {managerRole(a.role) && c.is_active && archiveBlockers.length > 0 && (
+        <Text style={[s.muted, { color: C.orange }]}>
+          Chưa thể xóa: {archiveBlockers.join(' · ')}. Hoàn tất các việc này trước.
+        </Text>
+      )}
+      {!c.is_active && (
+        <Text style={[s.text, { color: C.orange }]}>
+          Khách đã xóa khỏi danh sách bán hàng. Lịch sử và giá riêng được giữ nguyên.
+        </Text>
+      )}
       <Text style={s.muted}>
         {c.customer_type ?? 'Chưa phân loại'} ·{' '}
         {a.data.routes.find((r) => r.id === c.route_id)?.name ?? 'Chưa có tuyến'}
       </Text>
-      <CustomerPackagePrices customerId={id} />
+      <CustomerPackagePrices customerId={id} disabled={!c.is_active} />
       <Card>
         <Text style={s.text}>{c.phone ?? 'Chưa cập nhật điện thoại'}</Text>
         <Text style={s.muted}>{c.address || 'Chưa cập nhật địa chỉ'}</Text>
@@ -253,15 +373,16 @@ export function CustomerDetail({ id }: { id: string }) {
       </View>
       <Button
         title="Tạo đơn cho khách"
+        disabled={!c.is_active}
         icon="add-outline"
         onPress={() => a.editOrder(undefined, id)}
       />
       <View style={s.row}>
         <View style={{ flex: 1 }}>
-          <Button title="Ghi chăm sóc" secondary onPress={activity} />
+          <Button title="Ghi chăm sóc" disabled={!c.is_active} secondary onPress={activity} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button title="Hẹn việc" secondary onPress={task} />
+          <Button title="Hẹn việc" disabled={!c.is_active} secondary onPress={task} />
         </View>
       </View>
       <Text style={s.h2}>Việc cần theo dõi</Text>

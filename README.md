@@ -22,6 +22,8 @@ Các migration bổ sung trong supabase/migrations đã áp dụng vào Supabase
 
 POS tự lưu giỏ theo tài khoản. Mục Lịch sử / Chốt tiền hiển thị lần bán cá nhân, nhận tiền thực đếm và phiếu chờ quản lý xác nhận vào quỹ công ty. [Hướng dẫn chạy thử và phát hành iOS](docs/mobile/release.md) ghi rõ các bước ký TestFlight và nghiệm thu trên thiết bị thật còn lại.
 
+Chủ/quản lý có thể [xóa và khôi phục khách](docs/product/customer-archive.md). Khách bị ẩn khỏi danh sách bán nhưng giữ lịch sử và giá riêng; chặn xóa khi còn công nợ, đơn chưa xong hoặc POS chưa điền đủ bánh.
+
 - [Báo cáo triển khai và kiểm thử](docs/database/implementation.md)
 - [Contract RPC cho mobile](docs/database/api-contract.md)
 - [TypeScript types từ Supabase](src/types/database.ts)

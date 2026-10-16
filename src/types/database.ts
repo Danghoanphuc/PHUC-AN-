@@ -2794,6 +2794,8 @@ export type Database = {
       }
     }
     Functions: {
+      set_customer_active: { Args: { payload: Json; request_key: string }; Returns: string }
+
       allocate_pos_packages: {
         Args: { payload: Json; request_key: string }
         Returns: string

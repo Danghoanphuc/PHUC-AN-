@@ -414,6 +414,7 @@ export type FormSpec = {
   description?: string;
   fields: Field[];
   submitLabel?: string;
+  danger?: boolean;
   submit: (values: Record<string, string>, key: string) => Promise<void>;
 };
 export function FormSheet({
@@ -499,7 +500,11 @@ export function FormSheet({
         {busy ? (
           <ActivityIndicator color={C.green} />
         ) : (
-          <Button title={spec.submitLabel ?? 'Lưu thông tin'} onPress={() => void submit()} />
+          <Button
+            title={spec.submitLabel ?? 'Lưu thông tin'}
+            danger={spec.danger}
+            onPress={() => void submit()}
+          />
         )}
       </ScrollView>
     </Sheet>

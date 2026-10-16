@@ -89,6 +89,51 @@ scenario('quantity-first allocation enforces scope, version, total and atomic ro
  await admin();await q('update public.app_members set active=false where user_id=$1',[ids.staff]);await as('staff');
  assert.equal((await q('select * from public.pos_package_sales')).length,0);await fails(()=>rpc('post_pos_package_sale',{},'quantity-sale-key'),/Not authorized/);
 });
+
+scenario('customer archive and restore retain documents and prices, audit once and reject sales while archived',async()=>{
+ const sold=await sale({collected:40000});
+ await rpc('set_pos_package_price',{customer_id:ids.customer,package_unit:'bi',amount:15000,pieces_per_package:10});
+ const before=await q("select jsonb_build_object('sales',(select jsonb_agg(s) from public.sales s),'orders',(select jsonb_agg(o) from public.customer_orders o),'cash',(select jsonb_agg(m) from public.cash_movements m),'debt',(select jsonb_agg(r) from public.receivables r),'prices',(select jsonb_agg(p) from public.pos_package_prices p)) as data");
+ const payload={customer_id:ids.customer,is_active:false,expected_is_active:true,reason:'Ngừng mua hàng'};
+ assert.equal(await rpc('set_customer_active',payload,'archive-once'),ids.customer);
+ assert.equal(await rpc('set_customer_active',payload,'archive-once'),ids.customer);
+ assert.equal((await q('select is_active from public.customers where id=$1',[ids.customer]))[0].is_active,false);
+ const after=await q("select jsonb_build_object('sales',(select jsonb_agg(s) from public.sales s),'orders',(select jsonb_agg(o) from public.customer_orders o),'cash',(select jsonb_agg(m) from public.cash_movements m),'debt',(select jsonb_agg(r) from public.receivables r),'prices',(select jsonb_agg(p) from public.pos_package_prices p)) as data");
+ assert.deepEqual(after,before);
+ assert.equal((await q("select * from public.audit_events where action='customer.archived' and entity_id=$1",[ids.customer])).length,1);
+ await as('staff');
+ assert.equal((await q('select * from public.sales where id=$1',[sold.id])).length,1);
+ await fails(()=>rpc('post_pos_sale',{customer_id:ids.customer,expected_total:40000,lines:[{product_id:ids.donut,order_qty:1}]}),/Active customer/);
+ await fails(()=>rpc('save_customer_order',{customer_id:ids.customer,delivery_date:'2026-10-16',lines:[{product_id:ids.donut,order_qty:1}]}),/customer|Customer/);
+ await as('manager');await fails(()=>rpc('set_customer_active',{...payload,is_active:true}),/Trạng thái khách đã thay đổi/);
+ await rpc('set_customer_active',{...payload,is_active:true,expected_is_active:false,reason:'Khách quay lại'});
+ assert.equal((await q('select is_active from public.customers where id=$1',[ids.customer]))[0].is_active,true);
+ await rpc('set_customer_active',payload,'archive-once');
+ assert.equal((await q('select is_active from public.customers where id=$1',[ids.customer]))[0].is_active,true);
+ assert.equal((await q("select * from public.audit_events where action='customer.restored' and entity_id=$1",[ids.customer])).length,1);
+});
+scenario('customer archive blocks unpaid debt, unfinished orders and unallocated package sales',async()=>{
+ const p={customer_id:ids.customer,is_active:false,expected_is_active:true,reason:'Dọn khách ngừng mua'};
+ const sold=await sale();await fails(()=>rpc('set_customer_active',p),/công nợ/);
+ await rpc('collect_receivable',{receivable_id:sold.r.id,account_id:ids.account,amount:40000,txn_date:'2026-10-16'});
+ const open=await order();await fails(()=>rpc('set_customer_active',p),/đơn chưa xử lý/);
+ await rpc('transition_customer_order',{order_id:open.id,version:2,status:'cancelled',reason:'Không giao'});
+ const pack=await packageSale();await as('manager');await fails(()=>rpc('set_customer_active',p),/chưa điền đủ bánh/);
+ await rpc('allocate_pos_packages',{sale_id:pack.id,version:1,lines:pack.lines.map(l=>({line_id:l.id,product_id:ids.donut,quantity:l.quantity}))});
+ await rpc('set_customer_active',p);
+ assert.equal((await q('select is_active from public.customers where id=$1',[ids.customer]))[0].is_active,false);
+});
+scenario('customer status requires active managers, validates payload and blocks direct status updates',async()=>{
+ const p={customer_id:ids.customer,is_active:false,expected_is_active:true,reason:'Xóa khách trùng'};
+ await fails(()=>q('update public.customers set is_active=false where id=$1',[ids.customer]),/Xóa \/ Khôi phục/);
+ for(const invalid of [{...p,is_active:'false'},{...p,expected_is_active:null},{...p,reason:'x'},{...p,name:'Injected'}]) await fails(()=>rpc('set_customer_active',invalid),/không hợp lệ|Lý do/);
+ for(const actor of ['staff','outsider']) {await as(actor);await fails(()=>rpc('set_customer_active',p),/Not authorized/);}
+ await as('owner');await rpc('set_customer_active',p,'owner-archive-key');
+ await admin();await q('update public.app_members set active=false where user_id=$1',[ids.owner]);await as('owner');
+ await fails(()=>rpc('set_customer_active',p,'owner-archive-key'),/Not authorized/);
+ await admin();await db.exec('set role anon');await fails(()=>rpc('set_customer_active',p),/permission denied/);
+});
+
 before(async()=>{
  db=await PGlite.create(); await db.exec(baselineSql()); await db.exec(catalogueSeed);
  await applyTestMigrations(db);
